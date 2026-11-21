@@ -2,6 +2,7 @@ import { LESSONS, findLesson } from "../lessons";
 import { parseRoute } from "../route";
 import type { Store } from "../store/store";
 import { renderHome } from "./home";
+import { renderLesson } from "./lesson";
 import { showTermPopup } from "./term-popup";
 
 export interface Ctx {
@@ -28,7 +29,7 @@ export function startApp(root: HTMLElement, store: Store): void {
     const r = parseRoute(location.hash, LESSONS.map((l) => l.id));
     root.replaceChildren();
     window.scrollTo(0, 0);
-    if (r.name === "lesson") root.textContent = findLesson(r.id)!.title; // Task 7에서 교체
+    if (r.name === "lesson") renderLesson(root, ctx, findLesson(r.id)!);
     else renderHome(root, ctx);
   };
   applyTheme(store.data.settings.theme);
