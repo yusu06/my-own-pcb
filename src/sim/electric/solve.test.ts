@@ -108,3 +108,14 @@ describe("덜 만든 회로와 합선", () => {
     expect(solve(ckt(["bat:battery"], ["bat.+~bat.-"]), {}).short).toBe(true);
   });
 });
+
+test("트랜지스터 C·E를 거꾸로 꽂으면 LED가 켜지지 않는다", () => {
+  const s = solve(
+    ckt(
+      ["bat:battery", "btn:button", "rb:resistor:10000", "q:npn", "r:resistor:100", "led:led"],
+      ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", "bat.+~r.a", "r.b~led.a", "led.k~q.e", "q.c~bat.-"],
+    ),
+    { btn: true },
+  );
+  expect(s.parts.led.on).toBe(false);
+});

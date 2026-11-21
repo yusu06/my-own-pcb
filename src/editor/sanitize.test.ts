@@ -50,3 +50,13 @@ test("핀 이름이 틀린 선은 버린다", () => {
   const c = ckt(["bat:battery:3", "btn:button"], ["bat.x~btn.a"]);
   expect(sanitizeCircuit(c, task)!.wires).toHaveLength(0);
 });
+
+test("값은 팔레트 목록 안의 값만, 프리셋 값은 프리셋대로", () => {
+  const t2 = { ...task, palette: [...task.palette, { id: "r", kind: "resistor", label: "저항", values: [47, 100] }] } satisfies ElectricTask;
+  const c = ckt(["bat:battery:99", "r:resistor:0", "btn:button:5"], []);
+  const s = sanitizeCircuit(c, t2)!;
+  expect(s.parts.find((p) => p.id === "bat")!.value).toBe(3);
+  expect(s.parts.find((p) => p.id === "r")!.value).toBe(47);
+  expect(s.parts.find((p) => p.id === "btn")!.value).toBeUndefined();
+  expect(sanitizeCircuit(ckt(["r:resistor:100"], []), t2)!.parts.find((p) => p.id === "r")!.value).toBe(100);
+});

@@ -21,7 +21,12 @@ export function sanitizeCircuit(raw: unknown, task: ElectricTask): Circuit | nul
     if (!Number.isFinite(p.x) || !Number.isFinite(p.y) || !ROTS.includes(p.rot)) continue;
     if (parts.some((q) => q.id === p.id)) continue;
     const part: Part = { id: p.id, kind: p.kind, x: p.x, y: p.y, rot: p.rot };
-    if (Number.isFinite(p.value)) part.value = p.value;
+    // 값은 신뢰하지 않는다: 프리셋은 프리셋 값, 팔레트는 목록 안의 값(아니면 첫 값), 그 외엔 버린다
+    const pre = task.preset.parts.find((q) => q.id === p.id);
+    const values = task.palette.find((q) => q.id === p.id)?.values;
+    if (pre) {
+      if (pre.value !== undefined) part.value = pre.value;
+    } else if (values?.length) part.value = values.includes(p.value) ? p.value : values[0];
     parts.push(part);
   }
   for (const pre of task.preset.parts) if (!parts.some((q) => q.id === pre.id)) parts.unshift({ ...pre });

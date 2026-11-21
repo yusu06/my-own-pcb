@@ -44,11 +44,17 @@ export const lesson: Lesson = {
       preset: ckt(["bat:battery:3"], []),
       checks: [
         { kind: "truth", inputs: ["btn"], output: "led", expect: [0, 1] },
+        { kind: "current", part: "btn", min: 0, max: 0.001, when: { btn: true } },
         { kind: "noBurn" },
         { kind: "noShort" },
       ],
       reference: ckt(P, ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", ...LOAD]),
-      wrong: [ckt(P, ["bat.+~btn.a", "btn.b~rb.a", ...LOAD])],
+      wrong: [
+        ckt(P, ["bat.+~btn.a", "btn.b~rb.a", ...LOAD]),
+        ckt(P, ["bat.+~btn.a", "btn.b~r.a", "r.b~led.a", "led.k~bat.-"]),
+        ckt(P, ["bat.+~btn.a", "btn.b~q.b", ...LOAD]),
+        ckt(P, ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", "bat.+~r.a", "r.b~led.a", "led.k~q.e", "q.c~bat.-"]),
+      ],
       hint: "트랜지스터의 왼쪽 핀이 B(베이스), 오른쪽 위가 C(컬렉터), 오른쪽 아래가 E(이미터)예요.",
     },
   ],

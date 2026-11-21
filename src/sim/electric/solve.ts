@@ -117,7 +117,8 @@ export function solve(c: Circuit, pressed: Pressed): Solution {
     }
     for (const j of junctions) {
       if (j.part.kind !== "npn") continue;
-      const want = jCurrent(j) >= C.IB_ON;
+      // C가 E보다 높을 때만 켠다: C·E를 거꾸로 꽂은 회로가 켜지지 않게
+      const want = jCurrent(j) >= C.IB_ON && dv(j.part, "c", "e") >= 0;
       if (want !== (ceOn.get(j.part.id) ?? false)) {
         ceOn.set(j.part.id, want);
         changed = true;

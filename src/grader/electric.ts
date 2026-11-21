@@ -1,5 +1,5 @@
 import { buildNets, pinKey } from "../sim/electric/netlist";
-import { PINS } from "../sim/electric/parts";
+import { PINS, SWITCH_KINDS } from "../sim/electric/parts";
 import { solve, type Solution } from "../sim/electric/solve";
 import type { Circuit, PartKind, Pressed } from "../sim/electric/types";
 
@@ -81,6 +81,8 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         const name = kindName(chk.part);
         if (!r) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
         const range = `(지금 ${mA(r.current)}, 알맞은 범위 ${mA(chk.min)}~${mA(chk.max)})`;
+        if (SWITCH_KINDS.includes(c.parts.find((p) => p.id === chk.part)!.kind) && r.current > chk.max)
+          return { ok: false, message: `버튼·스위치에 전류가 너무 많이 흘러요 ${range}` };
         if (r.burnt) return { ok: false, message: `${name}가 탔어요. 전류가 너무 많아요 ${range}` };
         if (r.current < chk.min) return { ok: false, message: `${name}가 너무 어두워요 ${range}` };
         if (r.current > chk.max) return { ok: false, message: `${name}가 너무 밝아요. 수명이 짧아져요 ${range}` };
