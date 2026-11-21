@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import {
-  completeIfReady, lessonState, lessonSteps, markQuizCorrect, nextLessonId, openLesson, resumeStep, setStep,
+  completeIfReady, lessonState, lessonSteps, markQuizCorrect, markTaskDone, nextLessonId, openLesson, resumeStep,
+  saveWork, setStep,
 } from "./progress";
 import { emptySave } from "./store/schema";
 import type { Lesson } from "./lessons/types";
@@ -69,6 +70,24 @@ test("저장된 단계가 범위를 넘으면 맞춰서 이어 한다", () => {
   d = setStep("a", d, 2, 2);
   expect(resumeStep("a", d, L[0])).toBe(2);
   expect(resumeStep("b", d, L[1])).toBe(0);
+});
+
+test("과제가 있으면 퀴즈와 과제를 모두 끝내야 완료된다", () => {
+  const withTask = { ...mk("t", 1), tasks: [{} as never] };
+  let d = openLesson("t", emptySave(), [withTask], 1);
+  d = markQuizCorrect("t", d, 0, 2);
+  expect(completeIfReady("t", d, withTask, 3).progress.t.status).toBe("started");
+  d = markTaskDone("t", d, 0, 4);
+  d = markTaskDone("t", d, 0, 4);
+  expect(d.progress.t.tasksDone).toEqual([0]);
+  expect(completeIfReady("t", d, withTask, 5).progress.t.status).toBe("done");
+});
+
+test("saveWork는 입력을 바꾸지 않고 회로를 저장한다", () => {
+  const d = emptySave();
+  const out = saveWork(d, "0-1#0", { parts: [], wires: [] });
+  expect(out.work["0-1#0"]).toEqual({ parts: [], wires: [] });
+  expect(d.work).toEqual({});
 });
 
 test("입력 데이터를 변경하지 않는다", () => {

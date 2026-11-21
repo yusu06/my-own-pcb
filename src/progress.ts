@@ -37,7 +37,7 @@ export function nextLessonId(d: SaveData, lessons: Lesson[]): string | null {
 }
 
 function patch(d: SaveData, id: string, now: number, f: (p: LessonProgress) => Partial<LessonProgress>): SaveData {
-  const p = d.progress[id] ?? { status: "started", step: 0, quizCorrect: [], updatedAt: now };
+  const p = d.progress[id] ?? { status: "started", step: 0, quizCorrect: [], tasksDone: [], updatedAt: now };
   return { ...d, progress: { ...d.progress, [id]: { ...p, ...f(p), updatedAt: now } } };
 }
 
@@ -65,8 +65,17 @@ export function markQuizCorrect(id: string, d: SaveData, qi: number, now: number
   return patch(d, id, now, (p) => ({ quizCorrect: p.quizCorrect.includes(qi) ? p.quizCorrect : [...p.quizCorrect, qi] }));
 }
 
+export function markTaskDone(id: string, d: SaveData, ti: number, now: number): SaveData {
+  return patch(d, id, now, (p) => ({ tasksDone: p.tasksDone.includes(ti) ? p.tasksDone : [...p.tasksDone, ti] }));
+}
+
+export function saveWork(d: SaveData, key: string, circuit: unknown): SaveData {
+  return { ...d, work: { ...d.work, [key]: circuit } };
+}
+
 export function completeIfReady(id: string, d: SaveData, l: Lesson, now: number): SaveData {
   const got = new Set(d.progress[id]?.quizCorrect ?? []);
-  const ready = l.quiz.every((_, i) => got.has(i));
+  const tasks = new Set(d.progress[id]?.tasksDone ?? []);
+  const ready = l.quiz.every((_, i) => got.has(i)) && l.tasks.every((_, i) => tasks.has(i));
   return ready ? patch(d, id, now, () => ({ status: "done" })) : d;
 }

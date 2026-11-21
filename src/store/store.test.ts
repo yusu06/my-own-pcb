@@ -1,8 +1,9 @@
 import { expect, test } from "vitest";
 import { KEYS, openStore, type KV } from "./store";
-import { emptySave } from "./schema";
+import { CURRENT_VERSION, emptySave } from "./schema";
 import { migrate, SaveError } from "./migrate";
 import v1 from "./fixtures/v1.json";
+import v2 from "./fixtures/v2.json";
 
 function memKV(init: Record<string, string> = {}): KV & { map: Map<string, string> } {
   const map = new Map(Object.entries(init));
@@ -22,7 +23,7 @@ test("빈 저장소는 빈 저장으로 연다", () => {
 test("저장 후 다시 열면 진행 상황이 남아 있다", () => {
   const kv = memKV();
   const s = openStore(kv);
-  s.data = { ...s.data, progress: { "0-1": { status: "done", step: 5, quizCorrect: [0, 1, 2], updatedAt: 1 } } };
+  s.data = { ...s.data, progress: { "0-1": { status: "done", step: 5, quizCorrect: [0, 1, 2], tasksDone: [], updatedAt: 1 } } };
   s.save();
   expect(openStore(kv).data.progress["0-1"].status).toBe("done");
 });
@@ -107,7 +108,7 @@ test("백업을 불러오면 읽기 전용이 풀리고 저장된다", () => {
   const kv = memKV({ [KEYS.save]: JSON.stringify({ ...emptySave(), version: 99 }) });
   const s = openStore(kv);
   s.importBackup(JSON.stringify({ app: "my-own-pcb", data: emptySave() }));
-  expect(JSON.parse(kv.map.get(KEYS.save)!).version).toBe(1);
+  expect(JSON.parse(kv.map.get(KEYS.save)!).version).toBe(CURRENT_VERSION);
 });
 
 test("옛 버전 데이터는 마이그레이션 전에 hw.backup.prev에 원문을 남긴다", () => {
@@ -125,8 +126,32 @@ test("백업을 불러오기 전에 현재 데이터를 hw.backup.prev에 남긴
   expect(JSON.parse(kv.map.get(KEYS.prevBackup)!).settings.theme).toBe("dark");
 });
 
-test("v1 샘플 파일이 migrate를 통과한다", () => {
-  expect(migrate(v1).progress["0-1"].status).toBe("done");
+test("v1 샘플 파일이 v2로 옮겨진다", () => {
+  const d = migrate(v1);
+  expect(d.version).toBe(2);
+  expect(d.work).toEqual({});
+  expect(d.progress["0-1"].status).toBe("done");
+  expect(d.progress["0-1"].tasksDone).toEqual([]);
+  expect(d.progress["0-1"].quizCorrect).toEqual([0, 1, 2]);
+});
+
+test("v2 샘플 파일이 migrate를 통과한다", () => {
+  const d = migrate(v2);
+  expect(d.work["0-1#0"]).toBeTruthy();
+});
+
+test("v1 데이터를 열면 hw.backup.prev에 v1 원문이 남는다", () => {
+  const raw = JSON.stringify(v1);
+  const kv = memKV({ [KEYS.save]: raw });
+  const s = openStore(kv);
+  expect(kv.map.get(KEYS.prevBackup)).toBe(raw);
+  expect(s.data.version).toBe(2);
+});
+
+test("tasksDone이 정수 배열이 아니면 SaveError", () => {
+  const bad = { ...emptySave(), progress: { "0-1": { status: "done", step: 0, quizCorrect: [], tasksDone: "x", updatedAt: 1 } } };
+  expect(() => migrate(bad)).toThrow(SaveError);
+  expect(() => migrate({ ...emptySave(), work: null })).toThrow(SaveError);
 });
 
 test("형식이 틀린 progress 항목은 SaveError", () => {

@@ -1,0 +1,16 @@
+{
+  "version": 2,
+  "progress": {
+    "0-1": { "status": "started", "step": 3, "quizCorrect": [0], "tasksDone": [0], "updatedAt": 1763740800000 }
+  },
+  "work": {
+    "0-1#0": {
+      "parts": [
+        { "id": "bat", "kind": "battery", "x": 4, "y": 4, "rot": 0, "value": 3 },
+        { "id": "btn", "kind": "button", "x": 10, "y": 4, "rot": 0 }
+      ],
+      "wires": [{ "a": { "part": "bat", "pin": "+" }, "b": { "part": "btn", "pin": "a" } }]
+    }
+  },
+  "settings": { "theme": "system" }
+}

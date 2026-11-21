@@ -4,7 +4,16 @@ import { CURRENT_VERSION, type SaveData } from "./schema";
 export class SaveError extends Error {}
 
 /** MIGRATIONS[n]은 버전 n 데이터를 n+1로 바꾼다. 형식을 바꿀 때마다 하나씩 추가하고 fixtures로 테스트한다. */
-const MIGRATIONS: Record<number, (d: any) => any> = {};
+const MIGRATIONS: Record<number, (d: any) => any> = {
+  // v1 → v2: 만든 회로(work)와 과제 통과 기록(tasksDone) 추가
+  1: (d) => ({
+    ...d,
+    work: {},
+    progress: Object.fromEntries(
+      Object.entries(isObj(d.progress) ? d.progress : {}).map(([id, p]) => [id, isObj(p) ? { ...p, tasksDone: [] } : p]),
+    ),
+  }),
+};
 
 const STATUSES = ["started", "done", "skipped"];
 const THEMES = ["system", "light", "dark"];
@@ -19,7 +28,7 @@ export function migrate(raw: unknown): SaveData {
     if (!step) throw new SaveError(`버전 ${v} 데이터는 옮길 수 없어요.`);
     d = { ...step(d), version: v + 1 };
   }
-  if (!isObj(d.progress) || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
+  if (!isObj(d.progress) || !isObj(d.work) || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
     throw new SaveError("저장 데이터가 손상됐어요.");
   }
   for (const [id, p] of Object.entries(d.progress)) {
@@ -29,6 +38,8 @@ export function migrate(raw: unknown): SaveData {
       Number.isInteger(p.step) &&
       Array.isArray(p.quizCorrect) &&
       p.quizCorrect.every(Number.isInteger) &&
+      Array.isArray(p.tasksDone) &&
+      p.tasksDone.every(Number.isInteger) &&
       typeof p.updatedAt === "number";
     if (!ok) throw new SaveError(`단원 ${id}의 기록이 손상됐어요.`);
   }
