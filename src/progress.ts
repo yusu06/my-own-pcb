@@ -53,6 +53,7 @@ export function openLesson(id: string, d: SaveData, lessons: Lesson[], now: numb
 }
 
 export function resumeStep(id: string, d: SaveData, l: Lesson): number {
+  if (d.progress[id]?.status === "done") return 0; // 복습은 처음부터
   const last = lessonSteps(l).length - 1;
   return Math.min(Math.max(d.progress[id]?.step ?? 0, 0), last);
 }

@@ -4,7 +4,7 @@ import { SWITCH_KINDS } from "../sim/electric/parts";
 import { solve } from "../sim/electric/solve";
 import type { Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
 import { h } from "../ui/dom";
-import { GRID, PIN_OFFSET, pinPos, snap, wirePath } from "./geometry";
+import { GRID, PIN_OFFSET, pinPos, pointsPath, snap, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
 import { initEditor, reduce, type Action, type EditorState } from "./state";
 import { partSymbol, svg } from "./symbols";
@@ -81,17 +81,23 @@ export function mountEditor(opts: {
     const w = toWorld(p);
     return st.circuit.parts.find((q) => Math.hypot(q.x * GRID - w.x, q.y * GRID - w.y) <= 1.8 * GRID) ?? null;
   }
+  function route(c: Circuit, wr: Circuit["wires"][number]): [number, number][] | null {
+    const a = c.parts.find((q) => q.id === wr.a.part);
+    const b = c.parts.find((q) => q.id === wr.b.part);
+    return a && b ? wireRoute(a, wr.a.pin, b, wr.b.pin, c.parts) : null;
+  }
   function wireAt(p: Pt): number {
     return st.circuit.wires.findIndex((wr) => {
-      const a = st.circuit.parts.find((q) => q.id === wr.a.part);
-      const b = st.circuit.parts.find((q) => q.id === wr.b.part);
-      if (!a || !b) return false;
-      const A = toScreen(pinPos(a, wr.a.pin));
-      const B = toScreen(pinPos(b, wr.b.pin));
-      // 가로(A.y에서 A.x→B.x) 다음 세로(B.x에서 A.y→B.y)
-      const onH = Math.abs(p.y - A.y) <= WIRE_HIT_PX && p.x >= Math.min(A.x, B.x) - WIRE_HIT_PX && p.x <= Math.max(A.x, B.x) + WIRE_HIT_PX;
-      const onV = Math.abs(p.x - B.x) <= WIRE_HIT_PX && p.y >= Math.min(A.y, B.y) - WIRE_HIT_PX && p.y <= Math.max(A.y, B.y) + WIRE_HIT_PX;
-      return onH || onV;
+      const pts = route(st.circuit, wr)?.map(toScreen);
+      if (!pts) return false;
+      // 가로·세로 선분과의 거리
+      return pts.slice(1).some((B, i) => {
+        const A = pts[i];
+        return (
+          p.x >= Math.min(A.x, B.x) - WIRE_HIT_PX && p.x <= Math.max(A.x, B.x) + WIRE_HIT_PX &&
+          p.y >= Math.min(A.y, B.y) - WIRE_HIT_PX && p.y <= Math.max(A.y, B.y) + WIRE_HIT_PX
+        );
+      });
     });
   }
 
@@ -150,13 +156,22 @@ export function mountEditor(opts: {
     canvasBox.append(menu);
   }
 
+  /** 화면에 보이면서 다른 부품과 겹치지 않는, 가운데에서 가장 가까운 칸 */
   function freeSpot(): [number, number] {
-    const c = toWorld({ x: canvasBox.clientWidth / 2, y: canvasBox.clientHeight / 2 });
-    let [x, y] = [snap(c.x), snap(c.y)];
-    for (let i = 0; i < 20 && st.circuit.parts.some((q) => Math.abs(q.x - x) < 5 && Math.abs(q.y - y) < 4); i++) {
-      [x, y] = i % 2 === 0 ? [x + 6, y] : [x - 6, y + 5];
-    }
-    return [x, y];
+    const w = canvasBox.clientWidth;
+    const hgt = canvasBox.clientHeight;
+    const c = toWorld({ x: w / 2, y: hgt / 2 });
+    const [cx, cy] = [snap(c.x), snap(c.y)];
+    const free = (x: number, y: number) => !st.circuit.parts.some((q) => Math.abs(q.x - x) < 5 && Math.abs(q.y - y) < 4);
+    const visible = (x: number, y: number) => {
+      const a = toScreen([(x - 3) * GRID, (y - 2) * GRID]);
+      const b = toScreen([(x + 3) * GRID, (y + 2) * GRID]);
+      return a.x >= 0 && a.y >= 0 && b.x <= w && b.y <= hgt;
+    };
+    const cands: [number, number][] = [];
+    for (let dy = -10; dy <= 10; dy += 5) for (let dx = -12; dx <= 12; dx += 6) cands.push([cx + dx, cy + dy]);
+    cands.sort((p, q) => Math.hypot(p[0] - cx, p[1] - cy) - Math.hypot(q[0] - cx, q[1] - cy));
+    return cands.find(([x, y]) => free(x, y) && visible(x, y)) ?? cands.find(([x, y]) => free(x, y)) ?? [cx, cy];
   }
 
   // ---------- 그리기 ----------
@@ -166,11 +181,10 @@ export function mountEditor(opts: {
     world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.s})`);
     world.replaceChildren();
     for (const wr of c.wires) {
-      const a = c.parts.find((q) => q.id === wr.a.part);
-      const b = c.parts.find((q) => q.id === wr.b.part);
-      if (!a || !b) continue;
-      const flowing = (sol.parts[a.id]?.current ?? 0) >= 0.001 && (sol.parts[b.id]?.current ?? 0) >= 0.001;
-      world.append(svg("path", { d: wirePath(pinPos(a, wr.a.pin), pinPos(b, wr.b.pin)), class: "wire" + (flowing ? " flow" : "") }));
+      const pts = route(c, wr);
+      if (!pts) continue;
+      const flowing = (sol.parts[wr.a.part]?.current ?? 0) >= 0.001 && (sol.parts[wr.b.part]?.current ?? 0) >= 0.001;
+      world.append(svg("path", { d: pointsPath(pts), class: "wire" + (flowing ? " flow" : "") }));
     }
     for (const p of c.parts) {
       const g = partSymbol(p, sol.parts[p.id], !!pressed[p.id]);

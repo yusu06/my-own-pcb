@@ -232,3 +232,22 @@ svg.circuit .lever { stroke-width: 3; }
   background: var(--card); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 8px 24px rgb(0 0 0 / 0.25);
 }
 .ed-menu .btn { min-height: 44px; }
+
+.step-nav.inline { position: static; margin-top: 16px; }
+.task h2 { margin-top: 4px; }
+.test-results:empty { display: none; }
+.test-results { margin-top: 12px; display: grid; gap: 8px; }
+.test-results .pass { color: var(--ok); font-weight: 700; margin: 0; }
+.test-results .fail { color: var(--bad); font-weight: 700; margin: 0; }
+.check { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 0.92rem; }
+.check.bad { border-color: var(--bad); }
+table.truth { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 0.9rem; }
+table.truth th, table.truth td { border: 1px solid var(--line); padding: 4px 8px; text-align: center; }
+table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transparent); color: var(--bad); font-weight: 700; }
+.task-help { display: grid; gap: 8px; margin-top: 8px; }
+.task-help:empty { display: none; }
+.hint summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+.figure { display: flex; justify-content: center; margin-top: 8px; }
+.gate-figure { width: 200px; max-width: 100%; }
+.gate-figure path, .gate-figure circle { fill: none; stroke: var(--fg); stroke-width: 2.5; stroke-linejoin: round; }
+.gate-figure text { fill: var(--muted); font-size: 11px; }

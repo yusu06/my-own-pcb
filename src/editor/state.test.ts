@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { initEditor, reduce, type EditorState } from "./state";
-import { GRID, pinPos, snap, wirePath } from "./geometry";
+import { GRID, pinPos, segmentHitsPart, snap, wirePath, wireRoute } from "./geometry";
 import { ckt } from "../sim/electric/ckt";
 import type { PaletteItem } from "../lessons/types";
 
@@ -107,6 +107,20 @@ describe("좌표", () => {
     expect(pinPos({ ...part, rot: 90 }, "a")).toEqual([5 * GRID, 3 * GRID]);
     expect(pinPos({ ...part, rot: 180 }, "a")).toEqual([7 * GRID, 5 * GRID]);
   });
+  test("선은 부품 몸체를 가로지르지 않는 경로를 고른다", () => {
+    // 전구 오른쪽 핀 → 전지 − 핀(왼쪽 위). 단순 ㄱ자 경로는 전구나 전지를 가로지른다.
+    const lamp = { id: "lamp", kind: "lamp" as const, x: 10, y: 10, rot: 0 as const };
+    const bat = { id: "bat", kind: "battery" as const, x: 6, y: 7, rot: 0 as const };
+    const pts = wireRoute(lamp, "b", bat, "-", [lamp, bat]);
+    expect(pts[0]).toEqual(pinPos(lamp, "b"));
+    expect(pts.at(-1)).toEqual(pinPos(bat, "-"));
+    for (let i = 1; i < pts.length; i++) {
+      const [a, b] = [pts[i - 1], pts[i]];
+      expect(a[0] === b[0] || a[1] === b[1]).toBe(true); // 가로·세로 선분만
+      for (const p of [lamp, bat]) expect(segmentHitsPart(a, b, p), `선분 ${i}가 ${p.id}를 지남`).toBe(false);
+    }
+  });
+
   test("snap과 wirePath", () => {
     expect(snap(29)).toBe(1);
     expect(snap(31)).toBe(2);

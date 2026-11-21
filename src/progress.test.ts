@@ -90,6 +90,13 @@ test("saveWork는 입력을 바꾸지 않고 회로를 저장한다", () => {
   expect(d.work).toEqual({});
 });
 
+test("완료한 단원을 다시 열면 0단계부터", () => {
+  let d = openLesson("a", emptySave(), L, 1);
+  d = completeIfReady("a", markQuizCorrect("a", markQuizCorrect("a", d, 0, 1), 1, 1), L[0], 1);
+  d = setStep("a", d, 5, 2);
+  expect(resumeStep("a", d, L[0])).toBe(0);
+});
+
 test("입력 데이터를 변경하지 않는다", () => {
   const d = openLesson("a", emptySave(), L, 1);
   const before = structuredClone(d);

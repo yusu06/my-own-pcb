@@ -41,3 +41,69 @@ export function snap(v: number): number {
 export function wirePath(a: [number, number], b: [number, number]): string {
   return `M ${a[0]} ${a[1]} H ${b[0]} V ${b[1]}`;
 }
+
+type XY = [number, number];
+
+/** 부품 몸체 상자(핀은 상자 밖). 세계 좌표 [x1, y1, x2, y2] */
+export function partBox(p: Part): [number, number, number, number] {
+  const local: [number, number, number, number] = p.kind === "npn" ? [-1.2, -1.3, 1.6, 1.3] : [-1.4, -0.9, 1.4, 0.9];
+  const [a, b] = [rotate([local[0], local[1]], p.rot), rotate([local[2], local[3]], p.rot)];
+  const xs = [a[0], b[0]].map((v) => (p.x + v) * GRID);
+  const ys = [a[1], b[1]].map((v) => (p.y + v) * GRID);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
+/** 가로/세로 선분이 부품 몸체 안쪽을 지나는가 */
+export function segmentHitsPart(a: XY, b: XY, p: Part): boolean {
+  const [x1, y1, x2, y2] = partBox(p);
+  const [sx1, sx2] = [Math.min(a[0], b[0]), Math.max(a[0], b[0])];
+  const [sy1, sy2] = [Math.min(a[1], b[1]), Math.max(a[1], b[1])];
+  return sx2 > x1 && sx1 < x2 && sy2 > y1 && sy1 < y2;
+}
+
+/** 핀이 부품 밖을 향하는 방향(가로 또는 세로 단위 벡터) */
+function outward(p: Part, pin: string): XY {
+  const [dx, dy] = rotate(PIN_OFFSET[p.kind][pin], p.rot);
+  return Math.abs(dx) >= Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
+}
+
+/**
+ * 두 핀을 잇는 가로·세로 경로. 각 핀에서 바깥으로 한 칸 나간 뒤,
+ * ㄱ자 2가지와 ㄹ자 2가지 중 부품 몸체를 가장 적게 지나는 경로를 고른다(같으면 꺾임이 적은 것).
+ */
+export function wireRoute(pa: Part, pinA: string, pb: Part, pinB: string, parts: Part[]): XY[] {
+  const a = pinPos(pa, pinA);
+  const b = pinPos(pb, pinB);
+  const [oa, ob] = [outward(pa, pinA), outward(pb, pinB)];
+  const A: XY = [a[0] + oa[0] * GRID, a[1] + oa[1] * GRID];
+  const B: XY = [b[0] + ob[0] * GRID, b[1] + ob[1] * GRID];
+  const mx = Math.round((A[0] + B[0]) / 2 / GRID) * GRID;
+  const my = Math.round((A[1] + B[1]) / 2 / GRID) * GRID;
+  const middles: XY[][] = [
+    [[B[0], A[1]]],
+    [[A[0], B[1]]],
+    [[mx, A[1]], [mx, B[1]]],
+    [[A[0], my], [B[0], my]],
+  ];
+  const score = (pts: XY[]) => {
+    let n = 0;
+    for (let i = 1; i < pts.length; i++) for (const p of parts) if (segmentHitsPart(pts[i - 1], pts[i], p)) n++;
+    return n;
+  };
+  let best: XY[] = [];
+  let bestScore = Infinity;
+  for (const mid of middles) {
+    const pts = [a, A, ...mid, B, b];
+    const s = score(pts);
+    if (s < bestScore) [best, bestScore] = [pts, s];
+  }
+  // 길이 0인 선분과 한 직선 위 중간점 정리
+  return best.filter((p, i, arr) => {
+    if (i === 0 || i === arr.length - 1) return true;
+    const [prev, next] = [arr[i - 1], arr[i + 1]];
+    if (p[0] === prev[0] && p[1] === prev[1]) return false;
+    return !((prev[0] === p[0] && p[0] === next[0]) || (prev[1] === p[1] && p[1] === next[1]));
+  });
+}
+
+export const pointsPath = (pts: XY[]) => pts.map((p, i) => `${i ? "L" : "M"} ${p[0]} ${p[1]}`).join(" ");

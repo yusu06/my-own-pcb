@@ -42,7 +42,11 @@ export function attachGestures(el: HTMLElement | SVGElement, h: GestureHandlers)
   let prevPair: { d: number; c: Pt } | null = null;
 
   const onDown = (e: PointerEvent) => {
-    (el as Element).setPointerCapture?.(e.pointerId);
+    try {
+      (el as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      // 캡처가 안 되는 포인터여도 제스처 처리는 계속한다
+    }
     const p = local(e);
     pts.set(e.pointerId, p);
     if (pts.size === 1) {

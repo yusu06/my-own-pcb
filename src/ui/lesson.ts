@@ -6,6 +6,8 @@ import type { Ctx } from "./app";
 import { h } from "./dom";
 import { warningBar } from "./home";
 import { renderQuiz } from "./quiz-view";
+import { gateFigure } from "./figures";
+import { renderElectricTask } from "./task-electric";
 
 export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void {
   const rich = (s: string) => renderRich(s, ctx.showTerm);
@@ -23,7 +25,15 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
   };
 
   const card = (c: Card, kicker: string) =>
-    h("article", { class: "card" }, h("div", { class: "kicker" }, kicker), h("h2", {}, c.title), h("p", {}, rich(c.body)));
+    h(
+      "article",
+      { class: "card" },
+      h("div", { class: "kicker" }, kicker),
+      h("h2", {}, c.title),
+      h("p", {}, rich(c.body)),
+      c.figure ? h("div", { class: "figure" }, gateFigure(c.figure)) : null,
+    );
+  const taskDone = (i: number) => ctx.store.data.progress[lesson.id]?.tasksDone.includes(i) ?? false;
 
   function body(): HTMLElement {
     const s = steps[idx];
@@ -43,7 +53,7 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
       case "realWorld":
         return card(lesson.realWorld[s.i], "🔍 실제 기기에서는");
       case "task":
-        return h("p", {}, "실습은 다음 업데이트에서 추가돼요.");
+        return renderElectricTask(ctx, lesson, s.i, draw);
       case "quiz":
         return h("section", {}, h("div", { class: "kicker" }, "📝 마무리 퀴즈"), renderQuiz(ctx, lesson, draw));
       case "done": {
@@ -83,20 +93,25 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
         done ? "완료 ✔" : "모두 맞히면 완료",
       );
       if (!done) next.setAttribute("disabled", "");
+    } else if (s.kind === "task") {
+      const ok = taskDone(s.i);
+      next = h("button", { class: "btn primary", type: "button", onclick: () => goTo(idx + 1) }, ok ? "다음 →" : "테스트를 통과하면 다음");
+      if (!ok) next.setAttribute("disabled", "");
     } else next = h("button", { class: "btn primary", type: "button", onclick: () => goTo(idx + 1) }, s.kind === "client" ? "수락하기 →" : "다음 →");
-    return h("nav", { class: "step-nav" }, prev, next);
+    // 편집기 화면에서는 하단 버튼이 캔버스를 가리지 않게 일반 흐름으로 둔다
+    return h("nav", { class: "step-nav" + (s.kind === "task" ? " inline" : "") }, prev, next);
   }
 
-  let quizEl: HTMLElement | null = null;
+  let kept: { el: HTMLElement; step: number } | null = null;
   function draw() {
-    // 퀴즈 화면에서는 문제 상태(피드백)를 유지하고 하단 버튼만 갱신한다
-    const onQuiz = steps[idx].kind === "quiz";
-    if (onQuiz && quizEl && root.contains(quizEl)) {
+    // 퀴즈·실습 화면에서는 본문 상태(피드백, 편집 중인 회로)를 유지하고 하단 버튼만 갱신한다
+    const keep = steps[idx].kind === "quiz" || steps[idx].kind === "task";
+    if (keep && kept?.step === idx && root.contains(kept.el)) {
       root.querySelector(".step-nav")!.replaceWith(footer());
       return;
     }
     const b = body();
-    quizEl = onQuiz ? b : null;
+    kept = keep ? { el: b, step: idx } : null;
     root.replaceChildren(
       ...[
         warningBar(ctx),
