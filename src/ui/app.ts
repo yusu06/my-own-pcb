@@ -3,6 +3,8 @@ import { parseRoute } from "../route";
 import type { Store } from "../store/store";
 import { renderHome } from "./home";
 import { renderLesson } from "./lesson";
+import { renderGlossary } from "./glossary";
+import { renderSettings } from "./settings";
 import { showTermPopup } from "./term-popup";
 
 export interface Ctx {
@@ -30,6 +32,8 @@ export function startApp(root: HTMLElement, store: Store): void {
     root.replaceChildren();
     window.scrollTo(0, 0);
     if (r.name === "lesson") renderLesson(root, ctx, findLesson(r.id)!);
+    else if (r.name === "glossary") renderGlossary(root, ctx);
+    else if (r.name === "settings") renderSettings(root, ctx);
     else renderHome(root, ctx);
   };
   applyTheme(store.data.settings.theme);

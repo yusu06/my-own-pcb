@@ -164,3 +164,17 @@ div.hero { background: var(--card); color: var(--fg); border: 1px solid var(--li
 .feedback.ok strong { color: var(--ok); }
 .feedback.bad strong { color: var(--bad); }
 .feedback p { margin: 6px 0 0; }
+
+.search {
+  width: 100%; min-height: 48px; padding: 0 14px; margin-bottom: 12px; font: inherit; color: var(--fg);
+  background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+}
+.glossary dt { font-weight: 700; margin-top: 12px; }
+.glossary dd { margin: 2px 0 0; color: var(--muted); }
+.segmented { display: flex; gap: 8px; }
+.segmented .btn { flex: 1; padding: 0 8px; }
+.stack { display: grid; gap: 8px; }
+.btn.danger { color: var(--bad); border-color: var(--bad); }
+.settings-msg:empty { display: none; }
+.settings-msg.ok { color: var(--ok); }
+.settings-msg.bad { color: var(--bad); }
