@@ -1,3 +1,13 @@
 import "./styles.css";
+import { openStore } from "./store/store";
+import { startApp } from "./ui/app";
 
-document.getElementById("app")!.textContent = "내 하드웨어 공방";
+function safeStorage(): Storage | null {
+  try {
+    return window.localStorage;
+  } catch {
+    return null;
+  }
+}
+
+startApp(document.getElementById("app")!, openStore(safeStorage()));
