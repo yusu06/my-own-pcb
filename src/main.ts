@@ -1,6 +1,7 @@
 import "./styles.css";
 import { openStore } from "./store/store";
 import { startApp } from "./ui/app";
+import { initUpdates } from "./ui/update-banner";
 
 function safeStorage(): Storage | null {
   try {
@@ -10,4 +11,6 @@ function safeStorage(): Storage | null {
   }
 }
 
-startApp(document.getElementById("app")!, openStore(safeStorage()));
+const store = openStore(safeStorage());
+startApp(document.getElementById("app")!, store);
+initUpdates(store);

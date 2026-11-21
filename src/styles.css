@@ -178,3 +178,12 @@ div.hero { background: var(--card); color: var(--fg); border: 1px solid var(--li
 .settings-msg:empty { display: none; }
 .settings-msg.ok { color: var(--ok); }
 .settings-msg.bad { color: var(--bad); }
+
+.update-banner {
+  position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom));
+  width: calc(100% - 32px); max-width: 528px; z-index: 30;
+  display: flex; align-items: center; gap: 8px; padding: 8px 8px 8px 16px;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 6px 24px rgb(0 0 0 / 0.25);
+}
+.update-banner span { flex: 1; font-weight: 600; }
+.update-banner .btn.ghost { width: 48px; padding: 0; }
