@@ -26,6 +26,7 @@ npm run build    # dist/
 ```
 
 - 단원 추가: `src/lessons/ch<장>/<id>-<이름>.ts`를 만들고 `src/lessons/index.ts`의 `LESSONS`에 순서대로 넣는다. 배포한 단원 id는 바꾸지 않는다.
+- 전기 과제는 `reference`(모범 답안)와 `wrong`(틀린 회로)을 반드시 넣는다. 내용 테스트가 reference는 통과하고 wrong은 실패하는지 검증한다.
 - 용어 추가: `src/lessons/glossary.ts`. 본문에서는 `[[용어id]]`로 쓴다.
 - 저장 형식을 바꾸면 `src/store/migrate.ts`에 마이그레이션을 추가하고 `src/store/fixtures/`로 테스트한다.
 - `main`에 push하면 GitHub Actions가 테스트 → 빌드 → GitHub Pages 배포를 한다.
