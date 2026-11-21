@@ -42,6 +42,50 @@ describe("선형 부품", () => {
   });
 });
 
+describe("LED와 트랜지스터", () => {
+  const ledWith = (r: number) => ckt(["bat:battery", `r:resistor:${r}`, "led:led"], ["bat.+~r.a", "r.b~led.a", "led.k~bat.-"]);
+
+  test.each([
+    [100, 1 / 105.1, false],
+    [47, 1 / 52.1, false],
+    [220, 1 / 225.1, false],
+    [10, 1 / 15.1, true],
+  ])("저항 %dΩ + LED", (r, amps, burnt) => {
+    const s = solve(ledWith(r), {});
+    close(s.parts.led.current, amps, 2e-4);
+    expect(s.parts.led.burnt).toBe(burnt);
+    expect(s.parts.led.on).toBe(!burnt); // 탄 LED는 빛나지 않는다
+    expect(s.converged).toBe(true);
+  });
+
+  test("저항 없이 LED만 연결하면 탄다", () => {
+    const s = solve(ckt(["bat:battery", "led:led"], ["bat.+~led.a", "led.k~bat.-"]), {});
+    expect(s.parts.led.burnt).toBe(true);
+    expect(s.converged).toBe(true);
+  });
+
+  test("LED를 거꾸로 연결하면 꺼지고 타지 않는다", () => {
+    const s = solve(ckt(["bat:battery", "r:resistor:100", "led:led"], ["bat.+~r.a", "r.b~led.k", "led.a~bat.-"]), {});
+    expect(s.parts.led.on).toBe(false);
+    expect(s.parts.led.burnt).toBe(false);
+    close(s.parts.led.current, 0);
+  });
+
+  test("트랜지스터: 버튼을 누르면 LED가 켜진다", () => {
+    const c = ckt(
+      ["bat:battery", "btn:button", "rb:resistor:10000", "q:npn", "r:resistor:100", "led:led"],
+      ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", "q.e~bat.-", "bat.+~r.a", "r.b~led.a", "led.k~q.c"],
+    );
+    const off = solve(c, {});
+    expect(off.parts.led.on).toBe(false);
+    expect(off.converged).toBe(true);
+    const on = solve(c, { btn: true });
+    expect(on.parts.led.on).toBe(true);
+    close(on.parts.led.current, 0.0094, 5e-4);
+    expect(on.converged).toBe(true);
+  });
+});
+
 describe("덜 만든 회로와 합선", () => {
   test("전지가 없으면 모두 0, 모두 꺼짐", () => {
     const s = solve(ckt(["lamp:lamp", "r:resistor:100"], ["lamp.a~r.a"]), {});
