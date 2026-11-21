@@ -80,6 +80,51 @@ test("snapshot은 현재 데이터를 hw.backup.prev에 남긴다", () => {
   expect(JSON.parse(kv.map.get(KEYS.prevBackup)!)).toEqual(s.data);
 });
 
+test("미래 버전 데이터는 그 세션 동안 hw.save를 덮어쓰지 않는다", () => {
+  const raw = JSON.stringify({ ...emptySave(), version: 99 });
+  const kv = memKV({ [KEYS.save]: raw });
+  const s = openStore(kv);
+  s.data = { ...s.data, settings: { theme: "dark" } };
+  s.save();
+  expect(kv.map.get(KEYS.save)).toBe(raw);
+});
+
+test("hw.corrupt에 보관하지 못하면 hw.save를 덮어쓰지 않는다", () => {
+  const map = new Map<string, string>([[KEYS.save, "{깨진"]]);
+  const kv: KV = {
+    getItem: (k) => map.get(k) ?? null,
+    setItem: (k, v) => {
+      if (k === KEYS.corrupt) throw new Error("QuotaExceededError");
+      map.set(k, v);
+    },
+  };
+  const s = openStore(kv);
+  s.save();
+  expect(map.get(KEYS.save)).toBe("{깨진");
+});
+
+test("백업을 불러오면 읽기 전용이 풀리고 저장된다", () => {
+  const kv = memKV({ [KEYS.save]: JSON.stringify({ ...emptySave(), version: 99 }) });
+  const s = openStore(kv);
+  s.importBackup(JSON.stringify({ app: "my-own-pcb", data: emptySave() }));
+  expect(JSON.parse(kv.map.get(KEYS.save)!).version).toBe(1);
+});
+
+test("옛 버전 데이터는 마이그레이션 전에 hw.backup.prev에 원문을 남긴다", () => {
+  const raw = JSON.stringify({ ...emptySave(), version: 0 });
+  const kv = memKV({ [KEYS.save]: raw });
+  openStore(kv);
+  expect(kv.map.get(KEYS.prevBackup)).toBe(raw);
+});
+
+test("백업을 불러오기 전에 현재 데이터를 hw.backup.prev에 남긴다", () => {
+  const kv = memKV();
+  const s = openStore(kv);
+  s.data = { ...s.data, settings: { theme: "dark" } };
+  s.importBackup(JSON.stringify({ app: "my-own-pcb", data: emptySave() }));
+  expect(JSON.parse(kv.map.get(KEYS.prevBackup)!).settings.theme).toBe("dark");
+});
+
 test("v1 샘플 파일이 migrate를 통과한다", () => {
   expect(migrate(v1).progress["0-1"].status).toBe("done");
 });

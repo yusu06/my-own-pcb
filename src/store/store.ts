@@ -1,4 +1,4 @@
-import { emptySave, type SaveData } from "./schema";
+import { CURRENT_VERSION, emptySave, type SaveData } from "./schema";
 import { migrate, SaveError } from "./migrate";
 
 export type KV = Pick<Storage, "getItem" | "setItem">;
@@ -20,12 +20,16 @@ export interface Store {
 
 export function openStore(kv: KV | null): Store {
   let warning: string | null = null;
-  const write = (k: string, v: string) => {
-    if (!kv) return void (warning = NO_STORAGE);
+  // 원본을 안전하게 보관하지 못했거나 더 새 버전의 데이터면, 이 세션에서는 hw.save를 덮어쓰지 않는다
+  let protectSave = false;
+  const write = (k: string, v: string): boolean => {
+    if (!kv) return void (warning = NO_STORAGE), false;
     try {
       kv.setItem(k, v);
+      return true;
     } catch {
       warning = NO_STORAGE;
+      return false;
     }
   };
 
@@ -40,11 +44,17 @@ export function openStore(kv: KV | null): Store {
     }
   }
   if (raw !== null) {
+    let parsed: any;
     try {
-      data = migrate(JSON.parse(raw));
+      parsed = JSON.parse(raw);
+      if (typeof parsed?.version === "number" && parsed.version < CURRENT_VERSION) write(KEYS.prevBackup, raw);
+      data = migrate(parsed);
     } catch (e) {
-      write(KEYS.corrupt, raw); // 데이터 손실 방지: 원문을 보관해 둔다
+      const kept = write(KEYS.corrupt, raw); // 데이터 손실 방지: 원문을 보관해 둔다
+      const newer = typeof parsed?.version === "number" && parsed.version > CURRENT_VERSION;
+      protectSave = !kept || newer;
       warning ??= e instanceof SaveError ? e.message : "저장 데이터가 손상돼서 새로 시작해요. (원본은 따로 보관했어요)";
+      if (protectSave) warning += " 원래 데이터를 지키기 위해 지금은 저장하지 않아요.";
     }
   }
 
@@ -56,7 +66,7 @@ export function openStore(kv: KV | null): Store {
     set warning(w) {
       warning = w;
     },
-    save: () => write(KEYS.save, JSON.stringify(store.data)),
+    save: () => void (protectSave || write(KEYS.save, JSON.stringify(store.data))),
     snapshot: () => write(KEYS.prevBackup, JSON.stringify(store.data)),
     exportBackup: (now = new Date()) =>
       JSON.stringify({ app: "my-own-pcb", exportedAt: now.toISOString(), data: store.data }, null, 2),
@@ -70,7 +80,10 @@ export function openStore(kv: KV | null): Store {
       if (typeof parsed !== "object" || parsed === null || (parsed as any).app !== "my-own-pcb") {
         throw new SaveError("이 앱의 백업 파일이 아니에요.");
       }
-      store.data = migrate((parsed as any).data);
+      const next = migrate((parsed as any).data);
+      store.snapshot();
+      store.data = next;
+      protectSave = false; // 사용자가 직접 고른 백업이므로 덮어써도 된다
       store.save();
     },
   };

@@ -38,16 +38,23 @@ export function renderSettings(root: HTMLElement, ctx: Ctx): void {
     );
   drawTheme();
 
-  const exportBackup = () => {
+  const exportBackup = async () => {
     const now = new Date();
-    const blob = new Blob([ctx.store.exportBackup(now)], { type: "application/json" });
-    const a = h("a", {
-      href: URL.createObjectURL(blob),
-      download: `my-own-pcb-backup-${now.toISOString().slice(0, 10).replaceAll("-", "")}.json`,
-    });
+    const name = `my-own-pcb-backup-${now.toISOString().slice(0, 10).replaceAll("-", "")}.json`;
+    const file = new File([ctx.store.exportBackup(now)], name, { type: "application/json" });
+    // 아이폰 홈 화면 앱에서는 <a download>가 잘 안 되므로 공유 시트(파일에 저장, 카톡 나에게 보내기 등)를 먼저 쓴다
+    if (navigator.canShare?.({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: "내 하드웨어 공방 백업" });
+        return say("백업 파일을 공유했어요. 안전한 곳(파일 앱, 클라우드 등)에 보관하세요.");
+      } catch (e) {
+        if ((e as DOMException).name === "AbortError") return say("백업을 취소했어요.", false);
+      }
+    }
+    const a = h("a", { href: URL.createObjectURL(file), download: name });
     a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-    say("백업 파일을 내려받았어요. 안전한 곳(클라우드 등)에 보관하세요.");
+    setTimeout(() => URL.revokeObjectURL(a.href), 60_000);
+    say("백업 파일을 저장했어요. 다운로드 폴더를 확인하고 안전한 곳에 보관하세요.");
   };
 
   const file = h("input", { type: "file", accept: "application/json,.json", hidden: true });
