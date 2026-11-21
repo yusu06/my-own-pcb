@@ -1,0 +1,7 @@
+{
+  "version": 1,
+  "progress": {
+    "0-1": { "status": "done", "step": 5, "quizCorrect": [0, 1, 2], "updatedAt": 1763740800000 }
+  },
+  "settings": { "theme": "system" }
+}
