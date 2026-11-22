@@ -34,6 +34,21 @@ export function pinOffset(p: Part, pin: string): [number, number] | null {
   return pinOffsets(p)[pin] ?? null;
 }
 
+/** 부품 중심에서 몸체 끝까지(격자 칸). 회전하면 가로·세로가 바뀐다 */
+function halfExtent(p: Pick<Part, "kind" | "chip"> & { rot?: Part["rot"] }): { hw: number; hh: number } {
+  const hh = p.kind === "chip" ? Math.max(p.chip?.inputs.length ?? 0, p.chip?.outputs.length ?? 0, 1) : p.kind === "npn" ? 2 : 1;
+  return p.rot === 90 || p.rot === 270 ? { hw: hh, hh: 2 } : { hw: 2, hh };
+}
+
+/** 새 부품을 (x, y)에 놓아도 다른 부품 몸체와 겹치지 않는가 (가로 1칸, 세로 2칸 여유: 이름표 자리) */
+export function spotFree(parts: Part[], x: number, y: number, item: Pick<Part, "kind" | "chip">): boolean {
+  const b = halfExtent(item);
+  return !parts.some((q) => {
+    const a = halfExtent(q);
+    return Math.abs(q.x - x) < a.hw + b.hw + 1 && Math.abs(q.y - y) < a.hh + b.hh + 2;
+  });
+}
+
 /** 칩 몸체 크기(격자 칸) */
 export function chipSize(p: Part): { w: number; h: number } {
   const n = Math.max(p.chip?.inputs.length ?? 0, p.chip?.outputs.length ?? 0, 1);
