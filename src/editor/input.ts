@@ -42,6 +42,7 @@ export function attachGestures(el: HTMLElement | SVGElement, h: GestureHandlers)
   let prevPair: { d: number; c: Pt } | null = null;
 
   const onDown = (e: PointerEvent) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return; // 우클릭은 contextmenu에서 처리
     try {
       (el as Element).setPointerCapture?.(e.pointerId);
     } catch {
@@ -107,12 +108,27 @@ export function attachGestures(el: HTMLElement | SVGElement, h: GestureHandlers)
     h.up();
   };
 
+  // PC 마우스: 휠 = 확대/축소, 우클릭 = 길게 누르기와 같음
+  const onWheel = (e: WheelEvent) => {
+    e.preventDefault();
+    const r = el.getBoundingClientRect();
+    h.pinch(Math.exp(-e.deltaY * 0.0015), { x: e.clientX - r.left, y: e.clientY - r.top });
+  };
+  const onMenu = (e: MouseEvent) => {
+    e.preventDefault();
+    const r = el.getBoundingClientRect();
+    h.longPress({ x: e.clientX - r.left, y: e.clientY - r.top });
+  };
+  el.addEventListener("wheel", onWheel as EventListener, { passive: false });
+  el.addEventListener("contextmenu", onMenu as EventListener);
   el.addEventListener("pointerdown", onDown as EventListener);
   el.addEventListener("pointermove", onMove as EventListener);
   el.addEventListener("pointerup", onUp as EventListener);
   el.addEventListener("pointercancel", onUp as EventListener);
   return () => {
     clearTimeout(timer);
+    el.removeEventListener("wheel", onWheel as EventListener);
+    el.removeEventListener("contextmenu", onMenu as EventListener);
     el.removeEventListener("pointerdown", onDown as EventListener);
     el.removeEventListener("pointermove", onMove as EventListener);
     el.removeEventListener("pointerup", onUp as EventListener);

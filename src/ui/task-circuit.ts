@@ -141,12 +141,16 @@ export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
   return h(
     "section",
     { class: "task" },
-    h("div", { class: "kicker" }, "🛠 실습"),
-    h("h2", {}, task.title),
-    h("p", {}, rich(task.goal)),
-    already ? h("p", { class: "muted" }, "✅ 이미 통과한 과제예요. 다시 해 봐도 좋아요.") : null,
+    // PC 넓은 화면에서는 편집기 왼쪽, 설명·결과 오른쪽 (styles.css의 .task 격자)
+    h(
+      "div",
+      { class: "task-head" },
+      h("div", { class: "kicker" }, "🛠 실습"),
+      h("h2", {}, task.title),
+      h("p", {}, rich(task.goal)),
+      already ? h("p", { class: "muted" }, "✅ 이미 통과한 과제예요. 다시 해 봐도 좋아요.") : null,
+    ),
     editor.el,
-    results,
-    help,
+    h("div", { class: "task-side" }, results, help),
   );
 }
