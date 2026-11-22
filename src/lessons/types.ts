@@ -40,6 +40,16 @@ export interface ElectricTask {
   hint: string;
 }
 
+/**
+ * 순차 과제: 입력 각본(steps)을 차례로 넣고, model()이 만든 상태 모델의 출력과 단계마다 비교한다.
+ * from = 이 단계부터 검사(전원 직후 값에 기대지 않게). 기본 0
+ */
+export interface SeqSpec<V extends number> {
+  steps: Record<string, V>[];
+  model(): (i: Record<string, V>) => Record<string, V>;
+  from?: number;
+}
+
 export interface LogicTask {
   kind: "logic";
   title: string;
@@ -56,6 +66,8 @@ export interface LogicTask {
   expect: (0 | 1)[][];
   reference: Circuit;
   wrong: Circuit[];
+  /** 있으면 순차 과제(expect는 [])로 타임라인 채점 */
+  seq?: SeqSpec<0 | 1>;
   /** 통과하면 이 이름으로 부품함에 저장 */
   saveAs?: ChipName;
   /** NAND 환산 원가 목표. costRequired면 통과 조건, 아니면 ⭐만 */

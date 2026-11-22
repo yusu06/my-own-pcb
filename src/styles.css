@@ -315,3 +315,14 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
 @media (min-width: 900px) {
   .task.verilog .code-box { height: min(66vh, 720px); }
 }
+
+/* 타임라인(순차 회로 결과): 신호 × 단계 */
+.timeline { overflow-x: auto; font-family: ui-monospace, monospace; font-size: 0.85rem; margin: 0.5rem 0; }
+.tl-row { display: flex; white-space: nowrap; }
+.tl-name { flex: 0 0 6.5rem; position: sticky; left: 0; background: var(--card); padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; }
+.tl-cell { flex: 0 0 2.4rem; text-align: center; padding: 2px 0; border-left: 1px solid var(--line); }
+.tl-head .tl-cell { color: var(--muted); font-size: 0.75rem; }
+.tl-cell.v1 { background: color-mix(in srgb, var(--accent) 22%, transparent); }
+.tl-cell.vX { color: var(--bad); }
+.tl-out .tl-name { font-weight: 600; }
+.tl-cell.bad { background: color-mix(in srgb, var(--bad) 30%, transparent); outline: 1px solid var(--bad); font-weight: 600; }
