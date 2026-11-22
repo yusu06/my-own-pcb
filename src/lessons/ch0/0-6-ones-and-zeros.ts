@@ -1,5 +1,6 @@
 import type { Lesson } from "../types";
 import { ckt } from "../../sim/electric/ckt";
+import { lckt } from "../lckt";
 
 const P = ["bat:battery:3", "a:switch", "b:switch", "r:resistor:100", "led:led"];
 
@@ -8,7 +9,7 @@ export const lesson: Lesson = {
   chapter: 0,
   title: "1과 0의 정체",
   emoji: "⚡",
-  minutes: 12,
+  minutes: 15,
   client: {
     from: "공장 자동화 회사 ‘바른자동화’",
     request: "두 조건(A, B)이 모두 참일 때만 LED로 ‘준비 완료’를 알려 주는 표시기가 필요합니다.",
@@ -56,6 +57,27 @@ export const lesson: Lesson = {
       reference: ckt(P, ["bat.+~a.a", "a.b~b.a", "b.b~r.a", "r.b~led.a", "led.k~bat.-"]),
       wrong: [ckt(P, ["bat.+~a.a", "bat.+~b.a", "a.b~r.a", "b.b~r.a", "r.b~led.a", "led.k~bat.-"])],
       hint: "0-4 전자레인지(AND)와 0-2 LED 손전등을 합친 회로예요: 전지 + → A → B → 저항 → LED → 전지 −.",
+    },
+    {
+      kind: "logic",
+      title: "같은 동작을 게이트 기호로",
+      goal: "방금 만든 회로를 [[logic-gate]] 기호로 다시 그려요. 알맞은 게이트를 하나 골라 입력 A·B와 LED를 이으세요. ▶ 실험 모드에서 A·B를 탭해 0과 1을 바꿔 보세요.",
+      palette: [
+        { id: "and", kind: "chip", chip: "and", label: "AND" },
+        { id: "or", kind: "chip", chip: "or", label: "OR" },
+        { id: "not", kind: "chip", chip: "not", label: "NOT" },
+      ],
+      preset: lckt(["a:in", "b:in", "led:out"], []),
+      inputs: ["a", "b"],
+      outputs: ["led"],
+      labels: { a: "A", b: "B", led: "LED" },
+      expect: [[0], [0], [0], [1]],
+      reference: lckt(["a:in", "b:in", "led:out", "and:chip:and"], ["a.y~and.a", "b.y~and.b", "and.y~led.a"]),
+      wrong: [
+        lckt(["a:in", "b:in", "led:out"], ["a.y~led.a"]),
+        lckt(["a:in", "b:in", "led:out", "or:chip:or"], ["a.y~or.a", "b.y~or.b", "or.y~led.a"]),
+      ],
+      hint: "‘둘 다 켜져야 켜짐’은 AND예요. A를 AND의 a, B를 AND의 b, AND의 y를 LED에 이으세요.",
     },
   ],
   realWorld: [
