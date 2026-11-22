@@ -5,6 +5,7 @@ import type { Frame, Sim } from "./adapter";
 import { h } from "../ui/dom";
 import { GRID, outward, pinPos, pointsPath, snap, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
+import { editorKey, typingIn } from "./keys";
 import { initEditor, reduce, type Action, type EditorState } from "./state";
 import { svg } from "./symbols";
 
@@ -39,6 +40,9 @@ export function mountEditor(opts: {
       ? "" // 기호 안에 이름이 있다
       : (task.kind === "logic" ? task.labels?.[p.id] : undefined) ?? itemOf(p.id)?.label ?? (p.kind === "battery" ? "전지" : p.id.toUpperCase());
 
+  // 마우스가 있는 PC면 안내 문구를 "클릭"으로
+  const fine = typeof matchMedia === "function" && matchMedia("(hover: hover) and (pointer: fine)").matches;
+  const tapW = fine ? "클릭" : "탭";
   let st: EditorState = initEditor(task.preset, opts.saved);
   let selWire = -1; // 한 번 탭해서 선택한 선 (한 번 더 탭하면 삭제)
   let mode: "edit" | "run" = "edit";
@@ -230,10 +234,12 @@ export function mountEditor(opts: {
       (mode === "run"
         ? sim.runHelp
         : st.pending
-          ? "연결할 다른 핀을 탭하세요. (같은 핀을 다시 누르면 취소)"
+          ? `연결할 다른 핀을 ${tapW}하세요. (같은 핀을 다시 누르거나 Esc면 취소)`
           : selWire >= 0
-            ? "선택한 선을 한 번 더 탭하면 지워요. 빈 곳을 탭하면 취소."
-            : "핀을 탭해 선을 이어요. 부품은 끌어서 옮기고, 길게 누르면 회전·삭제.");
+            ? `선택한 선을 한 번 더 ${tapW}하면 지워요${fine ? " (Delete 키도 돼요)" : ""}. 빈 곳을 ${tapW}하면 취소.`
+            : fine
+              ? "핀을 클릭해 선을 이어요. 부품은 끌어서 옮기고, 우클릭하면 회전·삭제. 휠로 확대, Ctrl+Z 취소, Ctrl+Enter 테스트."
+              : "핀을 탭해 선을 이어요. 부품은 끌어서 옮기고, 길게 누르면 회전·삭제.");
 
     const left = task.palette.filter((i) => i.multi || !st.circuit.parts.some((p) => p.id === i.id));
     const place = (i: PaletteItem) => {
@@ -351,6 +357,27 @@ export function mountEditor(opts: {
     },
   });
 
+  // PC 키보드: Ctrl+Z/Y, Delete(선택한 선), Esc, Ctrl+Enter(테스트)
+  const onKey = (e: KeyboardEvent) => {
+    if (!el.isConnected) return document.removeEventListener("keydown", onKey);
+    if (typingIn(e.target)) return;
+    const a = editorKey(e);
+    if (!a) return;
+    if (a === "undo" || a === "redo") apply({ t: a });
+    else if (a === "test") opts.onTest(st.circuit);
+    else if (a === "deleteWire") {
+      if (mode !== "edit" || selWire < 0) return;
+      apply({ t: "removeWire", index: selWire });
+    } else {
+      st = { ...st, pending: null };
+      selWire = -1;
+      closeMenu();
+      render();
+    }
+    e.preventDefault();
+  };
+  document.addEventListener("keydown", onKey);
+
   requestAnimationFrame(() => {
     fit();
     render();
@@ -369,6 +396,7 @@ export function mountEditor(opts: {
     },
     destroy() {
       detach();
+      document.removeEventListener("keydown", onKey);
       clearTimeout(tipTimer);
     },
   };

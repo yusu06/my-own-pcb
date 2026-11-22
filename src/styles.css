@@ -273,3 +273,25 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
 .gate-figure { width: 200px; max-width: 100%; }
 .gate-figure path, .gate-figure circle { fill: none; stroke: var(--fg); stroke-width: 2.5; stroke-linejoin: round; }
 .gate-figure text { fill: var(--muted); font-size: 11px; }
+
+/* ---------- PC (넓은 화면 · 마우스) ---------- */
+@media (min-width: 900px) {
+  #app { max-width: 1120px; padding: 24px 32px; }
+  .update-banner { max-width: 560px; }
+  .chapters { display: grid; grid-template-columns: 1fr 1fr; gap: 0 24px; align-items: start; }
+  /* 글 위주 단계는 읽기 좋은 폭으로 가운데 */
+  #app > .card, #app > section:not(.task) { width: 100%; max-width: 720px; margin-left: auto; margin-right: auto; }
+  .step-nav { max-width: 720px; width: 100%; margin-left: auto; margin-right: auto; }
+  /* 실습: 왼쪽 편집기, 오른쪽 설명·결과 */
+  .task { display: grid; grid-template-columns: minmax(0, 1fr) 360px; grid-template-areas: "editor head" "editor side"; grid-template-rows: auto 1fr; gap: 0 24px; align-items: start; }
+  .task > .task-head { grid-area: head; }
+  .task > .editor { grid-area: editor; }
+  .task > .task-side { grid-area: side; }
+  .task .ed-canvas { height: min(72vh, 760px); }
+  .task + .step-nav, .step-nav.inline { max-width: none; }
+}
+@media (hover: hover) and (pointer: fine) {
+  svg.circuit { cursor: grab; }
+  svg.circuit:active { cursor: grabbing; }
+  .btn:hover { filter: brightness(1.06); }
+}

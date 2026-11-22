@@ -1,4 +1,5 @@
 import { LESSONS, findLesson } from "../lessons";
+import { lessonKey, typingIn } from "../editor/keys";
 import type { Card, Lesson } from "../lessons/types";
 import { completeIfReady, lessonSteps, nextLessonId, openLesson, resumeStep, setStep } from "../progress";
 import { renderRich } from "../rich";
@@ -128,5 +129,25 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
       ].filter((x): x is HTMLElement => x !== null),
     );
   }
+  // PC: ←/→로 단계 이동, 숫자 키로 퀴즈 보기 고르기
+  if (lessonKeys) document.removeEventListener("keydown", lessonKeys);
+  lessonKeys = (e: KeyboardEvent) => {
+    const nav = root.querySelector(".step-nav");
+    if (!nav) return document.removeEventListener("keydown", lessonKeys!);
+    if (e.altKey || typingIn(e.target)) return;
+    const a = lessonKey(e);
+    if (!a) return;
+    const btn =
+      a.t === "choice"
+        ? root.querySelectorAll<HTMLButtonElement>(".choices button")[a.i]
+        : (nav.children[a.t === "next" ? nav.children.length - 1 : 0] as HTMLButtonElement | undefined);
+    if (btn && !btn.disabled && !btn.hasAttribute("disabled")) {
+      e.preventDefault();
+      btn.click();
+    }
+  };
+  document.addEventListener("keydown", lessonKeys);
   draw();
 }
+
+let lessonKeys: ((e: KeyboardEvent) => void) | null = null;

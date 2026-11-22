@@ -68,7 +68,7 @@ export function renderHome(root: HTMLElement, ctx: Ctx): void {
       warningBar(ctx),
       h("header", { class: "top" }, h("h1", {}, "내 하드웨어 공방")),
       hero,
-      ...chapters,
+      h("div", { class: "chapters" }, ...chapters),
       h(
         "nav",
         { class: "bottom-links" },
