@@ -50,6 +50,8 @@ export interface LogicTask {
   preset: Circuit;
   inputs: string[];
   outputs: string[];
+  /** in·out 부품 이름표(예: { d: "문 열림" }). 없으면 id 대문자 */
+  labels?: Record<string, string>;
   /** 입력 조합 순서(첫 입력이 최상위 비트)마다 출력값 */
   expect: (0 | 1)[][];
   reference: Circuit;

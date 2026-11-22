@@ -1,5 +1,5 @@
 import type { PaletteItem } from "../lessons/types";
-import type { Circuit, Part, PinRef } from "../sim/electric/types";
+import type { ChipRef, Circuit, Part, PinRef } from "../sim/electric/types";
 
 export interface EditorState {
   circuit: Circuit;
@@ -12,7 +12,7 @@ export interface EditorState {
 }
 
 export type Action =
-  | { t: "place"; item: PaletteItem; x: number; y: number }
+  | { t: "place"; item: PaletteItem; x: number; y: number; chip?: ChipRef }
   | { t: "move"; id: string; x: number; y: number }
   | { t: "rotate"; id: string }
   | { t: "remove"; id: string }
@@ -44,9 +44,15 @@ export function reduce(s: EditorState, a: Action): EditorState {
   const has = (id: string) => c.parts.some((p) => p.id === id);
   switch (a.t) {
     case "place": {
-      if (has(a.item.id)) return s;
-      const part: Part = { id: a.item.id, kind: a.item.kind, x: a.x, y: a.y, rot: 0 };
+      let id = a.item.id;
+      if (a.item.multi) {
+        let n = 1;
+        while (has(`${a.item.id}${n}`)) n++;
+        id = `${a.item.id}${n}`;
+      } else if (has(id)) return s;
+      const part: Part = { id, kind: a.item.kind, x: a.x, y: a.y, rot: 0 };
       if (a.item.values?.length) part.value = a.item.values[0];
+      if (a.chip) part.chip = a.chip;
       return commit(s, { ...c, parts: [...c.parts, part] });
     }
     case "move":

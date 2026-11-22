@@ -1,6 +1,8 @@
 import type { PartResult } from "../sim/electric/solve";
 import type { Part } from "../sim/electric/types";
-import { GRID, pinOffsets } from "./geometry";
+import { CHIP_LABEL } from "../sim/digital/chips";
+import type { Bit } from "../sim/digital/sim";
+import { GRID, chipSize, pinOffsets } from "./geometry";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -59,14 +61,47 @@ function body(p: Part, r: PartResult | undefined, pressed: boolean): SVGElement[
         path("M -6 -6 L 20 -24 L 20 -40"), path("M -6 6 L 20 24 L 20 40"), path("M 12 15 L 20 24 L 9 23", "arrow"),
       ];
     default:
-      return []; // 논리 부품 기호는 Task 6
+      return [];
   }
 }
 
-export function partSymbol(p: Part, r: PartResult | undefined, pressed: boolean): SVGGElement {
-  const g = svg("g", { class: `part k-${p.kind}${r?.on ? " on" : ""}${r?.burnt ? " is-burnt" : ""}`, "data-id": p.id });
+const text = (x: number, y: number, s: string, cls: string) => Object.assign(svg("text", { x, y, class: cls, "text-anchor": "middle" }), { textContent: s });
+
+/** 논리 부품 기호. bit = 이 부품이 보여 줄 값(in: 입력값, out: 출력값) */
+function logicBody(p: Part, bit: Bit): SVGElement[] {
+  switch (p.kind) {
+    case "nand":
+      return [
+        line(-40, -20, -20, -20), line(-40, 20, -20, 20), line(22, 0, 40, 0),
+        path("M -20 -24 L -2 -24 A 24 24 0 0 1 -2 24 L -20 24 Z", "gate"),
+        svg("circle", { cx: 27, cy: 0, r: 5, class: "gate" }),
+      ];
+    case "in":
+      return [line(16, 0, 40, 0), svg("rect", { x: -16, y: -14, width: 32, height: 28, rx: 6, class: "in-box" }), text(0, 6, String(bit), "bit")];
+    case "out":
+      return [line(-40, 0, -14, 0), svg("circle", { cx: 0, cy: 0, r: 14, class: "out-lamp" }), text(0, 5, bit === "X" ? "?" : "", "bit")];
+    case "chip": {
+      const h = (chipSize(p).h * GRID) / 2;
+      const els: SVGElement[] = [svg("rect", { x: -30, y: -h, width: 60, height: h * 2, rx: 4, class: "gate" }),
+        text(0, 4, CHIP_LABEL[p.chip?.name ?? ""] ?? p.chip?.name ?? "?", "chip-name")];
+      for (const [pin, [dx, dy]] of Object.entries(pinOffsets(p))) {
+        const x = dx * GRID;
+        els.push(line(x, dy * GRID, Math.sign(x) * 30, dy * GRID), text(Math.sign(x) * 22, dy * GRID + 3, pin, "chip-pin"));
+      }
+      return els;
+    }
+    default:
+      return [];
+  }
+}
+
+const LOGIC = ["nand", "in", "out", "chip"];
+
+export function partSymbol(p: Part, r: PartResult | undefined, pressed: boolean, logic?: { bit: Bit; fallback: boolean }): SVGGElement {
+  const cls = `part k-${p.kind}${r?.on ? " on" : ""}${r?.burnt ? " is-burnt" : ""}${logic?.fallback ? " fallback" : ""}${logic?.bit === "X" ? " is-x" : ""}`;
+  const g = svg("g", { class: cls, "data-id": p.id });
   const inner = svg("g", { transform: `rotate(${p.rot})` });
-  for (const e of body(p, r, pressed)) inner.append(e);
+  for (const e of LOGIC.includes(p.kind) ? logicBody(p, logic?.bit ?? "X") : body(p, r, pressed)) inner.append(e);
   for (const [, [dx, dy]] of Object.entries(pinOffsets(p))) inner.append(svg("circle", { cx: dx * GRID, cy: dy * GRID, r: 5, class: "pin" }));
   g.append(inner);
   g.setAttribute("transform", `translate(${p.x * GRID} ${p.y * GRID})`);

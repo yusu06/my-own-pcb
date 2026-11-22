@@ -1,7 +1,8 @@
 import { expect, test } from "vitest";
 import { sanitizeCircuit } from "./sanitize";
 import { ckt } from "../sim/electric/ckt";
-import type { ElectricTask } from "../lessons/types";
+import type { ElectricTask, LogicTask } from "../lessons/types";
+import { makeLib } from "../sim/digital/chips";
 
 const task = {
   kind: "electric",
@@ -59,4 +60,28 @@ test("값은 팔레트 목록 안의 값만, 프리셋 값은 프리셋대로", 
   expect(s.parts.find((p) => p.id === "r")!.value).toBe(47);
   expect(s.parts.find((p) => p.id === "btn")!.value).toBeUndefined();
   expect(sanitizeCircuit(ckt(["r:resistor:100"], []), t2)!.parts.find((p) => p.id === "r")!.value).toBe(100);
+});
+
+test("논리 과제: 모르는 multi id와 스냅샷이 다른 칩은 버린다", () => {
+  const lt = {
+    kind: "logic", title: "", goal: "", hint: "",
+    palette: [
+      { id: "nand", kind: "nand", label: "NAND", multi: true },
+      { id: "and", kind: "chip", chip: "and", label: "AND", multi: true },
+    ],
+    preset: ckt(["a:in", "y:out"], []),
+    inputs: ["a"], outputs: ["y"], expect: [[0], [1]],
+    reference: ckt([], []), wrong: [],
+  } satisfies LogicTask;
+  const lib = makeLib({});
+  const chip = (id: string, inputs: string[], name = "and") => ({ id, kind: "chip", x: 1, y: 1, rot: 0, chip: { name, v: null, inputs, outputs: ["y"] } });
+  const raw = {
+    parts: [
+      ...ckt(["nand1:nand", "nand12:nand", "nandx:nand", "foo1:nand", "and1:nand"], []).parts,
+      chip("and2", ["a", "b"]), chip("and3", ["a"]), chip("and4", ["a", "b"], "or"),
+    ],
+    wires: [],
+  };
+  const s = sanitizeCircuit(raw, lt, lib)!;
+  expect(s.parts.map((p) => p.id).sort()).toEqual(["a", "and2", "nand1", "nand12", "y"]);
 });

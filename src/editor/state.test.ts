@@ -160,3 +160,22 @@ describe("논리 부품 핀", () => {
     expect(chipSize(chip)).toEqual({ w: 4, h: 4 });
   });
 });
+
+describe("여러 개 놓기와 칩", () => {
+  const nand: PaletteItem = { id: "nand", kind: "nand", label: "NAND", multi: true };
+  const andItem: PaletteItem = { id: "and", kind: "chip", chip: "and", label: "AND", multi: true };
+  const ref = { name: "and", v: 0, inputs: ["a", "b"], outputs: ["y"] };
+  test("multi 부품은 비어 있는 가장 작은 번호", () => {
+    let s = initEditor(ckt([], []), null);
+    s = reduce(s, { t: "place", item: nand, x: 1, y: 1 });
+    s = reduce(s, { t: "place", item: nand, x: 5, y: 1 });
+    expect(s.circuit.parts.map((p) => p.id)).toEqual(["nand1", "nand2"]);
+    s = reduce(s, { t: "remove", id: "nand1" });
+    s = reduce(s, { t: "place", item: nand, x: 9, y: 1 });
+    expect(s.circuit.parts.map((p) => p.id).sort()).toEqual(["nand1", "nand2"]);
+  });
+  test("칩을 놓으면 ChipRef가 붙는다", () => {
+    const s = reduce(initEditor(ckt([], []), null), { t: "place", item: andItem, x: 1, y: 1, chip: ref });
+    expect(s.circuit.parts[0]).toMatchObject({ id: "and1", kind: "chip", chip: ref });
+  });
+});

@@ -1,3 +1,6 @@
+import { electricSim } from "../editor/adapter";
+import { gradeElectric } from "../grader/electric";
+import { SWITCH_KINDS } from "../sim/electric/parts";
 import { sanitizeCircuit } from "../editor/sanitize";
 import { mountEditor } from "../editor/view";
 import type { CheckResult } from "../grader/electric";
@@ -27,7 +30,9 @@ export function renderElectricTask(ctx: Ctx, lesson: Lesson, ti: number, onPasse
       ctx.store.data = saveWork(ctx.store.data, key, c);
       ctx.store.save();
     },
-    onTest(rs) {
+    sim: electricSim,
+    onTest(c) {
+      const rs = gradeElectric(c, task.checks, task.palette.filter((p) => SWITCH_KINDS.includes(p.kind)).map((p) => p.id));
       showResults(rs);
       if (rs.every((r) => r.ok)) {
         ctx.store.data = markTaskDone(lesson.id, ctx.store.data, ti, Date.now());

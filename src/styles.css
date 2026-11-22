@@ -208,7 +208,6 @@ svg.circuit .wire.flow { stroke: var(--accent); stroke-dasharray: 8 6; animation
 svg.circuit text { fill: var(--fg); stroke: none; font-size: 12px; font-family: inherit; }
 svg.circuit .part-label { fill: var(--muted); font-size: 11px; }
 svg.circuit .pin-name { fill: var(--accent); font-size: 10px; font-weight: 700; pointer-events: none; }
-svg.circuit .wire.selected { stroke: var(--danger, #e5484d); stroke-width: 5; }
 svg.circuit .pol { font-size: 13px; font-weight: 700; }
 svg.circuit .lamp-glass { fill: rgb(255 200 40 / calc(var(--glow, 0) * 0.95)); }
 svg.circuit .led-body { fill: rgb(255 60 60 / calc(var(--glow, 0) * 0.95)); }
@@ -218,6 +217,23 @@ svg.circuit .on .rays { opacity: 1; stroke: #f5a623; }
 svg.circuit .burnt { stroke: var(--bad); stroke-width: 4; }
 svg.circuit .arrow { fill: var(--fg); }
 svg.circuit .lever { stroke-width: 3; }
+/* 논리 회로 (M3) */
+svg.circuit .wire.logic.hi { stroke: var(--accent); stroke-width: 3.5; }
+svg.circuit .wire.logic.lo { stroke: var(--muted); opacity: 0.7; }
+svg.circuit .wire.logic.x { stroke: var(--bad); stroke-dasharray: 5 5; }
+svg.circuit .wire.selected { stroke: var(--bad); stroke-width: 5; opacity: 1; stroke-dasharray: none; }
+svg.circuit .gate { fill: var(--card); }
+svg.circuit .in-box { fill: var(--card); stroke: var(--accent); }
+svg.circuit .k-in.on .in-box { fill: var(--accent); }
+svg.circuit .k-in.on .bit { fill: var(--accent-fg); }
+svg.circuit .bit { font-size: 15px; font-weight: 700; }
+svg.circuit .out-lamp { fill: var(--card); }
+svg.circuit .k-out.on .out-lamp { fill: #f5c400; filter: drop-shadow(0 0 8px rgb(255 190 60 / 0.9)); }
+svg.circuit .k-out.is-x .out-lamp { stroke: var(--bad); stroke-dasharray: 4 3; }
+svg.circuit .chip-name { font-size: 13px; font-weight: 700; }
+svg.circuit .chip-pin { font-size: 9px; fill: var(--muted); }
+svg.circuit .fallback .gate { stroke: var(--muted); stroke-dasharray: 3 3; }
+svg.circuit .fallback .chip-name { fill: var(--muted); }
 .ed-status { font-size: 0.9rem; color: var(--muted); min-height: 1.4em; }
 .ed-status.bad { color: var(--bad); font-weight: 600; }
 .ed-palette { display: flex; flex-wrap: wrap; gap: 8px; }

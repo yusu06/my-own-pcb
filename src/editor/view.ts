@@ -1,13 +1,12 @@
-import { gradeElectric, type CheckResult } from "../grader/electric";
-import type { ElectricTask } from "../lessons/types";
-import { SWITCH_KINDS, pinNames } from "../sim/electric/parts";
-import { solve } from "../sim/electric/solve";
-import type { Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
+import type { PaletteItem, Task } from "../lessons/types";
+import { pinNames } from "../sim/electric/parts";
+import type { ChipRef, Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
+import type { Frame, Sim } from "./adapter";
 import { h } from "../ui/dom";
-import { GRID, PIN_OFFSET, outward, pinPos, pointsPath, snap, wireRoute } from "./geometry";
+import { GRID, outward, pinPos, pointsPath, snap, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
 import { initEditor, reduce, type Action, type EditorState } from "./state";
-import { partSymbol, svg } from "./symbols";
+import { svg } from "./symbols";
 
 export interface EditorHandle {
   el: HTMLElement;
@@ -23,18 +22,22 @@ const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
   led: { a: "+", k: "−" },
   npn: { b: "B", c: "C", e: "E" },
 };
-const mA = (a: number) => `${(a * 1000).toFixed(1)} mA`;
-
 export function mountEditor(opts: {
-  task: ElectricTask;
+  task: Task;
   saved: Circuit | null;
+  sim: Sim;
+  /** 칩 팔레트 항목을 놓을 때 붙일 참조(부품함 최신 버전, 없으면 기본 부품) */
+  chipRef?: (name: string) => ChipRef | null;
   onChange(c: Circuit): void;
-  onTest(results: CheckResult[]): void;
+  onTest(c: Circuit): void;
 }): EditorHandle {
-  const { task } = opts;
-  const switchIds = task.palette.filter((p) => SWITCH_KINDS.includes(p.kind)).map((p) => p.id);
-  const labelOf = (id: string) =>
-    task.palette.find((p) => p.id === id)?.label ?? (task.preset.parts.find((p) => p.id === id)?.kind === "battery" ? "전지" : id);
+  const { task, sim } = opts;
+  const itemOf = (id: string): PaletteItem | undefined =>
+    task.palette.find((i) => i.id === id || (i.multi && new RegExp(`^${i.id}\\d+$`).test(id)));
+  const labelOf = (p: Part) =>
+    p.kind === "nand" || p.kind === "chip"
+      ? "" // 기호 안에 이름이 있다
+      : (task.kind === "logic" ? task.labels?.[p.id] : undefined) ?? itemOf(p.id)?.label ?? (p.kind === "battery" ? "전지" : p.id.toUpperCase());
 
   let st: EditorState = initEditor(task.preset, opts.saved);
   let selWire = -1; // 한 번 탭해서 선택한 선 (한 번 더 탭하면 삭제)
@@ -58,7 +61,7 @@ export function mountEditor(opts: {
     { class: "ed-tools" },
     h("button", { type: "button", class: "btn", "aria-label": "실행 취소", onclick: () => apply({ t: "undo" }) }, "↶"),
     h("button", { type: "button", class: "btn", "aria-label": "다시 실행", onclick: () => apply({ t: "redo" }) }, "↷"),
-    h("button", { type: "button", class: "btn primary", onclick: () => opts.onTest(gradeElectric(st.circuit, task.checks, switchIds)) }, "🧪 테스트 실행"),
+    h("button", { type: "button", class: "btn primary", onclick: () => opts.onTest(st.circuit) }, "🧪 테스트 실행"),
   );
   const canvasBox = h("div", { class: "ed-canvas" });
   canvasBox.append(canvas);
@@ -145,7 +148,7 @@ export function mountEditor(opts: {
     menu = h(
       "div",
       { class: "ed-menu", role: "menu" },
-      h("strong", {}, labelOf(part.id)),
+      h("strong", {}, labelOf(part) || itemOf(part.id)?.label || part.kind.toUpperCase()),
       !locked && h("button", { type: "button", class: "btn", onclick: () => (apply({ t: "rotate", id: part.id }), closeMenu()) }, "⟳ 회전"),
       !locked && h("button", { type: "button", class: "btn danger", onclick: () => (apply({ t: "remove", id: part.id }), closeMenu()) }, "🗑 삭제"),
       ...(item?.values ?? []).map((v) =>
@@ -183,19 +186,18 @@ export function mountEditor(opts: {
   // ---------- 그리기 ----------
   function render() {
     const c = shown();
-    const sol = solve(c, pressed);
+    const fr = sim.frame(c, pressed);
     world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.s})`);
     world.replaceChildren();
     c.wires.forEach((wr, i) => {
       const pts = route(c, wr);
       if (!pts) return;
-      const flowing = (sol.parts[wr.a.part]?.current ?? 0) >= 0.001 && (sol.parts[wr.b.part]?.current ?? 0) >= 0.001;
-      world.append(svg("path", { d: pointsPath(pts), class: "wire" + (flowing ? " flow" : "") + (i === selWire ? " selected" : "") }));
+      world.append(svg("path", { d: pointsPath(pts), class: `wire ${fr.wireClass(wr)}` + (i === selWire ? " selected" : "") }));
     });
     for (const p of c.parts) {
-      const g = partSymbol(p, sol.parts[p.id], !!pressed[p.id]);
+      const g = fr.part(p, !!pressed[p.id]);
       const label = svg("text", { x: 0, y: p.kind === "npn" ? 0 : 34, class: "part-label", "text-anchor": "middle" });
-      label.textContent = labelOf(p.id) + (p.kind === "resistor" && p.value ? ` ${p.value >= 1000 ? `${p.value / 1000}k` : p.value}Ω` : "");
+      label.textContent = labelOf(p) + (p.kind === "resistor" && p.value ? ` ${p.value >= 1000 ? `${p.value / 1000}k` : p.value}Ω` : "");
       if (p.kind === "npn") label.setAttribute("transform", "translate(0 52)");
       g.append(label);
       world.append(g);
@@ -221,34 +223,32 @@ export function mountEditor(opts: {
       b.classList.toggle("primary", on);
       b.setAttribute("aria-pressed", String(on));
     });
-    const burnt = Object.values(sol.parts).some((r) => r.burnt);
-    status.className = "ed-status" + (sol.short || burnt ? " bad" : "");
-    status.textContent = sol.short
-      ? "⚠ 합선! 전지가 뜨거워져요. +와 −를 바로 잇는 선을 지우세요."
-      : burnt
-        ? "⚠ LED가 탔어요! 저항으로 전류를 줄여 보세요."
-        : !sol.converged
-          ? "⚠ 회로 계산이 불안정해요."
-          : mode === "run"
-            ? "스위치·버튼을 눌러 보세요. 핀을 탭하면 전압, 부품을 탭하면 전류가 보여요."
-            : st.pending
-              ? "연결할 다른 핀을 탭하세요. (같은 핀을 다시 누르면 취소)"
-              : selWire >= 0
-                ? "선택한 선을 한 번 더 탭하면 지워요. 빈 곳을 탭하면 취소."
-              : "핀을 탭해 선을 이어요. 부품은 끌어서 옮기고, 길게 누르면 회전·삭제.";
+    const warn = fr.warning();
+    status.className = "ed-status" + (warn ? " bad" : "");
+    status.textContent =
+      warn ??
+      (mode === "run"
+        ? sim.runHelp
+        : st.pending
+          ? "연결할 다른 핀을 탭하세요. (같은 핀을 다시 누르면 취소)"
+          : selWire >= 0
+            ? "선택한 선을 한 번 더 탭하면 지워요. 빈 곳을 탭하면 취소."
+            : "핀을 탭해 선을 이어요. 부품은 끌어서 옮기고, 길게 누르면 회전·삭제.");
 
-    const left = task.palette.filter((i) => !st.circuit.parts.some((p) => p.id === i.id));
+    const left = task.palette.filter((i) => i.multi || !st.circuit.parts.some((p) => p.id === i.id));
+    const place = (i: PaletteItem) => {
+      const chip = i.chip ? opts.chipRef?.(i.chip) ?? undefined : undefined;
+      if (i.kind === "chip" && !chip) return; // 부품을 찾을 수 없으면 놓지 않는다
+      const [x, y] = freeSpot();
+      apply({ t: "place", item: i, x, y, chip });
+    };
     palette.replaceChildren(
-      ...(mode === "edit"
-        ? left.map((i) =>
-            h("button", { type: "button", class: "btn", onclick: () => { const [x, y] = freeSpot(); apply({ t: "place", item: i, x, y }); } }, `+ ${i.label}`),
-          )
-        : []),
+      ...(mode === "edit" ? left.map((i) => h("button", { type: "button", class: "btn", onclick: () => place(i) }, `+ ${i.label}`)) : []),
     );
     palette.hidden = mode !== "edit" || left.length === 0;
-    (lastSol = sol);
+    lastFrame = fr;
   }
-  let lastSol = solve(st.circuit, pressed);
+  let lastFrame: Frame = sim.frame(st.circuit, pressed);
 
   // ---------- 처음 화면: 모든 부품이 보이게 ----------
   function fit() {
@@ -268,7 +268,7 @@ export function mountEditor(opts: {
     down(p) {
       if (mode !== "run") return;
       const part = partAt(p);
-      if (part && (part.kind === "button" || part.kind === "button-nc")) {
+      if (part && sim.hold(part)) {
         held = part.id;
         pressed = { ...pressed, [part.id]: true };
         render();
@@ -285,13 +285,14 @@ export function mountEditor(opts: {
       closeMenu();
       const pin = pinAt(p);
       if (mode === "run") {
-        if (pin) return showTip(p, `${(lastSol.nodeV[`${pin.part}.${pin.pin}`] ?? 0).toFixed(2)} V`);
         const part = partAt(p);
-        if (part?.kind === "switch") {
+        if (part && sim.toggle(part)) {
           pressed = { ...pressed, [part.id]: !pressed[part.id] };
           return render();
         }
-        if (part && part.kind !== "button" && part.kind !== "button-nc") showTip(p, mA(lastSol.parts[part.id]?.current ?? 0));
+        if (pin) return showTip(p, lastFrame.pinTip(pin));
+        const tip = part && !sim.hold(part) ? lastFrame.partTip(part) : null;
+        if (tip) showTip(p, tip);
         return;
       }
       if (pin) return apply({ t: "tapPin", pin });
