@@ -3,7 +3,7 @@ import { sanitizeCircuit } from "../editor/sanitize";
 import { mountEditor } from "../editor/view";
 import { gradeElectric, type CheckResult } from "../grader/electric";
 import { gradeLogic } from "../grader/logic";
-import type { Lesson } from "../lessons/types";
+import type { CircuitTask, Lesson } from "../lessons/types";
 import { markTaskDone, recordCost, saveChip, saveWork } from "../progress";
 import { renderRich } from "../rich";
 import { CHIP_LABEL, makeLib } from "../sim/digital/chips";
@@ -17,7 +17,7 @@ const ANSWER_AFTER = 5;
 
 /** 전기·논리 과제 공통 화면: 편집기 + 테스트 결과 + 힌트/모범 답안 */
 export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed: () => void): HTMLElement {
-  const task = lesson.tasks[ti];
+  const task = lesson.tasks[ti] as CircuitTask; // lesson.ts가 kind로 나눠 부른다
   const key = `${lesson.id}#${ti}`;
   const rich = (s: string) => renderRich(s, ctx.showTerm);
   const already = ctx.store.data.progress[lesson.id]?.tasksDone.includes(ti) ?? false;

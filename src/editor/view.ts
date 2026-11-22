@@ -1,9 +1,9 @@
-import type { PaletteItem, Task } from "../lessons/types";
+import type { CircuitTask, PaletteItem } from "../lessons/types";
 import { pinNames } from "../sim/electric/parts";
 import type { ChipRef, Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
 import type { Frame, Sim } from "./adapter";
 import { h } from "../ui/dom";
-import { GRID, outward, pinPos, pointsPath, snap, wireRoute } from "./geometry";
+import { GRID, outward, pinPos, pointsPath, snap, spotFree, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
 import { editorKey, typingIn } from "./keys";
 import { initEditor, reduce, type Action, type EditorState } from "./state";
@@ -24,7 +24,7 @@ const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
   npn: { b: "B", c: "C", e: "E" },
 };
 export function mountEditor(opts: {
-  task: Task;
+  task: CircuitTask;
   saved: Circuit | null;
   sim: Sim;
   /** 칩 팔레트 항목을 놓을 때 붙일 참조(부품함 최신 버전, 없으면 기본 부품) */
@@ -170,12 +170,12 @@ export function mountEditor(opts: {
   }
 
   /** 화면에 보이면서 다른 부품과 겹치지 않는, 가운데에서 가장 가까운 칸 */
-  function freeSpot(): [number, number] {
+  function freeSpot(item: Pick<Part, "kind" | "chip">): [number, number] {
     const w = canvasBox.clientWidth;
     const hgt = canvasBox.clientHeight;
     const c = toWorld({ x: w / 2, y: hgt / 2 });
     const [cx, cy] = [snap(c.x), snap(c.y)];
-    const free = (x: number, y: number) => !st.circuit.parts.some((q) => Math.abs(q.x - x) < 5 && Math.abs(q.y - y) < 4);
+    const free = (x: number, y: number) => spotFree(st.circuit.parts, x, y, item);
     const visible = (x: number, y: number) => {
       const a = toScreen([(x - 3) * GRID, (y - 2) * GRID]);
       const b = toScreen([(x + 3) * GRID, (y + 2) * GRID]);
@@ -245,7 +245,7 @@ export function mountEditor(opts: {
     const place = (i: PaletteItem) => {
       const chip = i.chip ? opts.chipRef?.(i.chip) ?? undefined : undefined;
       if (i.kind === "chip" && !chip) return; // 부품을 찾을 수 없으면 놓지 않는다
-      const [x, y] = freeSpot();
+      const [x, y] = freeSpot({ kind: i.kind, chip });
       apply({ t: "place", item: i, x, y, chip });
     };
     palette.replaceChildren(

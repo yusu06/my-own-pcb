@@ -63,8 +63,32 @@ export interface LogicTask {
   costRequired?: boolean;
 }
 
-/** M4에서 verilog 과제를 더한다. */
-export type Task = ElectricTask | LogicTask;
+export interface VerilogPort {
+  name: string;
+  width: number;
+}
+
+/** 사용자가 Verilog 모듈을 쓰는 과제. 앱이 모든 입력 조합으로 시험한다. */
+export interface VerilogTask {
+  kind: "verilog";
+  title: string;
+  goal: string;
+  hint: string;
+  /** 시험할 모듈 이름(뼈대에 이미 들어 있다) */
+  top: string;
+  skeleton: string;
+  inputs: VerilogPort[];
+  outputs: VerilogPort[];
+  /** 결과표에 보일 이름(예: { d: "층 번호" }) */
+  labels?: Record<string, string>;
+  /** 기대 출력. 해석기와 따로 TS로 써서 해석기 버그가 모범 답안과 같이 숨지 않게 한다 */
+  spec(i: Record<string, number>): Record<string, number>;
+  reference: string;
+  wrong: string[];
+}
+
+export type CircuitTask = ElectricTask | LogicTask;
+export type Task = CircuitTask | VerilogTask;
 
 export interface Lesson {
   id: string;

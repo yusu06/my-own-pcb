@@ -9,6 +9,7 @@ import { warningBar } from "./home";
 import { renderQuiz } from "./quiz-view";
 import { gateFigure } from "./figures";
 import { renderCircuitTask } from "./task-circuit";
+import { renderVerilogTask } from "./task-verilog";
 
 export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void {
   const rich = (s: string) => renderRich(s, ctx.showTerm);
@@ -54,7 +55,7 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
       case "realWorld":
         return card(lesson.realWorld[s.i], "🔍 실제 기기에서는");
       case "task":
-        return renderCircuitTask(ctx, lesson, s.i, draw);
+        return lesson.tasks[s.i].kind === "verilog" ? renderVerilogTask(ctx, lesson, s.i, draw) : renderCircuitTask(ctx, lesson, s.i, draw);
       case "quiz":
         return h("section", {}, h("div", { class: "kicker" }, "📝 마무리 퀴즈"), renderQuiz(ctx, lesson, draw));
       case "done": {

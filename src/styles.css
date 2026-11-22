@@ -295,3 +295,23 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
   svg.circuit:active { cursor: grabbing; }
   .btn:hover { filter: brightness(1.06); }
 }
+
+/* ---------- Verilog 편집기 ---------- */
+.code-editor { display: flex; flex-direction: column; gap: 8px; }
+.code-box {
+  display: flex; height: min(48dvh, 420px); min-height: 240px; overflow: hidden;
+  background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+  font: 15px/1.5 ui-monospace, "SFMono-Regular", Consolas, "D2Coding", monospace;
+}
+.code-gutter { flex: none; padding: 10px 6px 10px 10px; overflow: hidden; text-align: right; color: var(--muted); user-select: none; min-width: 2.6em; border-right: 1px solid var(--line); }
+.code-gutter .bad { color: var(--bad); font-weight: 700; background: color-mix(in srgb, var(--bad) 18%, transparent); border-radius: 4px; }
+.code-input {
+  flex: 1; min-width: 0; border: 0; outline: 0; resize: none; padding: 10px; background: transparent; color: var(--fg);
+  font: inherit; tab-size: 2; white-space: pre; overflow: auto;
+}
+.sym-bar { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: thin; }
+.sym-bar .btn.sym { flex: none; min-width: 44px; min-height: 40px; padding: 0 10px; font-family: ui-monospace, Consolas, monospace; }
+.truth-wrap { overflow-x: auto; }
+@media (min-width: 900px) {
+  .task.verilog .code-box { height: min(66vh, 720px); }
+}

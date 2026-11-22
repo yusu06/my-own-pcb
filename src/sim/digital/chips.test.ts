@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { ckt } from "../electric/ckt";
 import type { ChipRef, Circuit } from "../electric/types";
-import { DEFAULT_CHIPS, makeLib, validChipDef } from "./chips";
+import { CHIP_LABEL, DEFAULT_CHIPS, makeLib, validChipDef } from "./chips";
 import { nandCost, simulate, type ChipDef } from "./sim";
 
 const noLib = () => null;
@@ -52,4 +52,33 @@ test("validChipDef", () => {
   const noOut: Circuit = { parts: myAnd.circuit.parts.filter((p) => p.kind !== "out"), wires: [] };
   expect(validChipDef({ ...myAnd, circuit: noOut })).toBe(false);
   expect(validChipDef({ ...myAnd, inputs: [] })).toBe(false);
+});
+
+/** 여러 입력·출력 칩의 진리표(첫 입력이 최상위 비트), 출력은 이어 붙인 문자열 */
+function multiTable(def: ChipDef): string[] {
+  return Array.from({ length: 1 << def.inputs.length }, (_, n) => {
+    const ins = Object.fromEntries(def.inputs.map((name, i) => [name, ((n >> (def.inputs.length - 1 - i)) & 1) as 0 | 1]));
+    const out = simulate(def.circuit, ins, noLib).out;
+    return def.outputs.map((o) => out[o]).join("");
+  });
+}
+
+test("MUX 기본 부품: s가 0이면 a, 1이면 b (NAND 4개)", () => {
+  expect(DEFAULT_CHIPS.mux.inputs).toEqual(["a", "b", "s"]);
+  expect(multiTable(DEFAULT_CHIPS.mux)).toEqual(["0", "0", "0", "1", "1", "0", "1", "1"]);
+  expect(nandCost(DEFAULT_CHIPS.mux.circuit, noLib)).toBe(4);
+  expect(CHIP_LABEL.mux).toBe("MUX");
+});
+
+test("반가산기·전가산기 기본 부품 (NAND 5개, 9개)", () => {
+  expect(DEFAULT_CHIPS.ha.inputs).toEqual(["a", "b"]);
+  expect(DEFAULT_CHIPS.ha.outputs).toEqual(["s", "c"]);
+  expect(multiTable(DEFAULT_CHIPS.ha)).toEqual(["00", "10", "10", "01"]);
+  expect(nandCost(DEFAULT_CHIPS.ha.circuit, noLib)).toBe(5);
+  expect(DEFAULT_CHIPS.fa.inputs).toEqual(["a", "b", "cin"]);
+  expect(DEFAULT_CHIPS.fa.outputs).toEqual(["s", "cout"]);
+  // 출력 순서 s cout, 입력 a b cin
+  expect(multiTable(DEFAULT_CHIPS.fa)).toEqual(["00", "10", "10", "01", "10", "01", "01", "11"]);
+  expect(nandCost(DEFAULT_CHIPS.fa.circuit, noLib)).toBe(9);
+  expect([CHIP_LABEL.ha, CHIP_LABEL.fa]).toEqual(["반가산기", "전가산기"]);
 });

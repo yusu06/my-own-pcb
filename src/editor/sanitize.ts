@@ -1,4 +1,4 @@
-import type { Task } from "../lessons/types";
+import type { CircuitTask } from "../lessons/types";
 import { makeLib } from "../sim/digital/chips";
 import type { ChipLib } from "../sim/digital/sim";
 import { pinNames } from "../sim/electric/parts";
@@ -11,7 +11,7 @@ const ROTS = [0, 90, 180, 270];
  * 저장된 회로(신뢰할 수 없는 데이터)를 과제에 맞게 정리한다.
  * 형식이 틀리면 null. 업데이트로 사라졌거나 종류가 바뀐 부품, 그 부품을 가리키는 선은 버린다.
  */
-export function sanitizeCircuit(raw: unknown, task: Task, lib: ChipLib = makeLib({})): Circuit | null {
+export function sanitizeCircuit(raw: unknown, task: CircuitTask, lib: ChipLib = makeLib({})): Circuit | null {
   if (!isObj(raw) || !Array.isArray(raw.parts) || !Array.isArray(raw.wires)) return null;
   const strs = (v: unknown): v is string[] => Array.isArray(v) && v.every((s) => typeof s === "string");
   const same = (a: string[], b: string[]) => a.length === b.length && a.every((s, i) => s === b[i]);
