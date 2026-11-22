@@ -1,5 +1,6 @@
 import type { Lesson } from "./lessons/types";
 import type { LessonProgress, SaveData } from "./store/schema";
+import type { ChipDef } from "./sim/digital/sim";
 
 export type Step =
   | { kind: "client" }
@@ -79,4 +80,19 @@ export function completeIfReady(id: string, d: SaveData, l: Lesson, now: number)
   const tasks = new Set(d.progress[id]?.tasksDone ?? []);
   const ready = l.quiz.every((_, i) => got.has(i)) && l.tasks.every((_, i) => tasks.has(i));
   return ready ? patch(d, id, now, () => ({ status: "done" })) : d;
+}
+
+/** 부품함에 저장. 최신 버전과 같으면 그 번호, 다르면 새 버전을 덧붙인다(옛 회로는 옛 버전을 계속 쓴다). */
+export function saveChip(d: SaveData, name: string, def: ChipDef): { data: SaveData; version: number } {
+  const versions = d.chips[name] ?? [];
+  const last = versions.length - 1;
+  if (last >= 0 && JSON.stringify(versions[last]) === JSON.stringify(def)) return { data: d, version: last };
+  return { data: { ...d, chips: { ...d.chips, [name]: [...versions, def] } }, version: last + 1 };
+}
+
+/** 단원의 최저 NAND 원가 기록(더 낮을 때만) */
+export function recordCost(d: SaveData, id: string, cost: number): SaveData {
+  const p = d.progress[id];
+  if (!p || (p.best !== undefined && p.best <= cost)) return d;
+  return { ...d, progress: { ...d.progress, [id]: { ...p, best: cost } } };
 }

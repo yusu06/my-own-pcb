@@ -13,6 +13,8 @@ const MIGRATIONS: Record<number, (d: any) => any> = {
       Object.entries(isObj(d.progress) ? d.progress : {}).map(([id, p]) => [id, isObj(p) ? { ...p, tasksDone: [] } : p]),
     ),
   }),
+  // v2 → v3: 부품함(chips) 추가
+  2: (d) => ({ ...d, chips: {} }),
 };
 
 const STATUSES = ["started", "done", "skipped"];
@@ -28,7 +30,8 @@ export function migrate(raw: unknown): SaveData {
     if (!step) throw new SaveError(`버전 ${v} 데이터는 옮길 수 없어요.`);
     d = { ...step(d), version: v + 1 };
   }
-  if (!isObj(d.progress) || !isObj(d.work) || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
+  const chipsOk = isObj(d.chips) && Object.values(d.chips).every(Array.isArray);
+  if (!isObj(d.progress) || !isObj(d.work) || !chipsOk || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
     throw new SaveError("저장 데이터가 손상됐어요.");
   }
   for (const [id, p] of Object.entries(d.progress)) {

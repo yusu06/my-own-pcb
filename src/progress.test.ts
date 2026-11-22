@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import {
   completeIfReady, lessonState, lessonSteps, markQuizCorrect, markTaskDone, nextLessonId, openLesson, resumeStep,
-  saveWork, setStep,
+  recordCost, saveChip, saveWork, setStep,
 } from "./progress";
 import { emptySave } from "./store/schema";
 import type { Lesson } from "./lessons/types";
@@ -105,4 +105,24 @@ test("입력 데이터를 변경하지 않는다", () => {
   markQuizCorrect("a", d, 0, 2);
   completeIfReady("a", d, L[0], 2);
   expect(d).toEqual(before);
+});
+
+test("saveChip: 같은 정의면 버전 유지, 다르면 새 버전", () => {
+  const def = { inputs: ["a"], outputs: ["y"], circuit: { parts: [], wires: [] } };
+  const r1 = saveChip(emptySave(), "not", def);
+  expect(r1.version).toBe(0);
+  const r2 = saveChip(r1.data, "not", JSON.parse(JSON.stringify(def)));
+  expect(r2.version).toBe(0);
+  expect(r2.data.chips.not).toHaveLength(1);
+  const r3 = saveChip(r2.data, "not", { ...def, outputs: ["z"] });
+  expect(r3.version).toBe(1);
+  expect(r3.data.chips.not).toHaveLength(2);
+});
+
+test("recordCost: 더 낮을 때만 갱신", () => {
+  let d = openLesson("a", emptySave(), [], 1);
+  d = recordCost(d, "a", 5);
+  expect(d.progress.a.best).toBe(5);
+  expect(recordCost(d, "a", 7).progress.a.best).toBe(5);
+  expect(recordCost(d, "a", 3).progress.a.best).toBe(3);
 });

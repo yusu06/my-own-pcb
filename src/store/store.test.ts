@@ -126,9 +126,10 @@ test("백업을 불러오기 전에 현재 데이터를 hw.backup.prev에 남긴
   expect(JSON.parse(kv.map.get(KEYS.prevBackup)!).settings.theme).toBe("dark");
 });
 
-test("v1 샘플 파일이 v2로 옮겨진다", () => {
+test("v1 샘플 파일이 최신 버전으로 옮겨진다", () => {
   const d = migrate(v1);
-  expect(d.version).toBe(2);
+  expect(d.version).toBe(CURRENT_VERSION);
+  expect(d.chips).toEqual({});
   expect(d.work).toEqual({});
   expect(d.progress["0-1"].status).toBe("done");
   expect(d.progress["0-1"].tasksDone).toEqual([]);
@@ -145,7 +146,7 @@ test("v1 데이터를 열면 hw.backup.prev에 v1 원문이 남는다", () => {
   const kv = memKV({ [KEYS.save]: raw });
   const s = openStore(kv);
   expect(kv.map.get(KEYS.prevBackup)).toBe(raw);
-  expect(s.data.version).toBe(2);
+  expect(s.data.version).toBe(CURRENT_VERSION);
 });
 
 test("tasksDone이 정수 배열이 아니면 SaveError", () => {
@@ -164,4 +165,16 @@ test("백업을 불러오면 손상 경고가 사라진다", () => {
   expect(s.warning).not.toBeNull();
   s.importBackup(JSON.stringify({ app: "my-own-pcb", data: emptySave() }));
   expect(s.warning).toBeNull();
+});
+
+test("v2 샘플 파일이 v3로 옮겨지고 부품함이 생긴다", () => {
+  const d = migrate(v2);
+  expect(CURRENT_VERSION).toBe(3);
+  expect(d.version).toBe(3);
+  expect(d.chips).toEqual({});
+});
+
+test("부품함이 객체가 아니면 손상으로 본다", () => {
+  expect(() => migrate({ ...emptySave(), chips: [] })).toThrow(SaveError);
+  expect(() => migrate({ ...emptySave(), chips: { and: "x" } })).toThrow(SaveError);
 });
