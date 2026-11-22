@@ -28,4 +28,12 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
     term: "LED",
     short: "전류가 흐르면 빛을 내는 부품(발광 다이오드). 한쪽 방향으로만 전류가 흐른다.",
   },
+  hdl: {
+    term: "HDL(하드웨어 기술 언어)",
+    short: "회로를 그림 대신 글로 적는 언어. Verilog와 VHDL이 대표적이다. 명령의 순서가 아니라 연결을 적는다.",
+  },
+  module: { term: "모듈", short: "Verilog에서 회로 한 덩어리. 입력·출력 포트가 있는 상자이고, 다른 모듈 안에 부품처럼 넣을 수 있다." },
+  fpga: { term: "FPGA", short: "안의 연결을 나중에 다시 정할 수 있는 칩. Verilog로 쓴 회로를 실제로 돌려 볼 때 많이 쓴다." },
+  "seven-segment": { term: "7세그먼트", short: "막대 7개(a~g)를 켜고 꺼서 숫자를 보여 주는 표시 장치. 엘리베이터, 전자시계에 쓰인다." },
+  decoder: { term: "디코더", short: "입력 코드(예: 4비트 숫자)를 받아 그에 맞는 출력들을 켜 주는 회로." },
 };
