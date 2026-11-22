@@ -1,4 +1,4 @@
-import type { PaletteItem, Task } from "../lessons/types";
+import type { CircuitTask, PaletteItem } from "../lessons/types";
 import { pinNames } from "../sim/electric/parts";
 import type { ChipRef, Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
 import type { Frame, Sim } from "./adapter";
@@ -24,7 +24,7 @@ const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
   npn: { b: "B", c: "C", e: "E" },
 };
 export function mountEditor(opts: {
-  task: Task;
+  task: CircuitTask;
   saved: Circuit | null;
   sim: Sim;
   /** 칩 팔레트 항목을 놓을 때 붙일 참조(부품함 최신 버전, 없으면 기본 부품) */

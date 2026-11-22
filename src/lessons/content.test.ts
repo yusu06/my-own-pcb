@@ -1,7 +1,9 @@
 import { describe, expect, test } from "vitest";
 import { CHAPTERS, LESSONS, findLesson } from "./index";
 import { GLOSSARY } from "./glossary";
-import type { ElectricTask, Lesson, Task } from "./types";
+import type { CircuitTask, ElectricTask, Lesson, VerilogTask } from "./types";
+import { gradeVerilog, verilogCombos } from "../grader/verilog";
+import { parse } from "../sim/verilog/parser";
 import type { Circuit } from "../sim/electric/types";
 import { gradeLogic } from "../grader/logic";
 import { DEFAULT_CHIPS, makeLib } from "../sim/digital/chips";
@@ -21,16 +23,45 @@ function allTexts(l: Lesson): string[] {
     ...l.concepts.flatMap((c) => [c.title, c.body]),
     ...l.realWorld.flatMap((c) => [c.title, c.body]),
     ...l.quiz.flatMap((q) => [q.q, q.explain, ...(q.kind === "choice" ? q.choices : [])]),
-    ...l.tasks.flatMap((t) => [t.title, t.goal, t.hint, ...t.palette.map((p) => p.label)]),
+    ...l.tasks.flatMap((t) => [t.title, t.goal, t.hint, ...(t.kind === "verilog" ? Object.values(t.labels ?? {}) : t.palette.map((p) => p.label))]),
   ];
 }
 
 const switchIds = (t: ElectricTask) => t.palette.filter((p) => SWITCH_KINDS.includes(p.kind)).map((p) => p.id);
 const lib = makeLib({}); // 부품함이 비어 있으면 기본 부품으로 채점
-const failures = (t: Task, c: Circuit): string[] =>
+const failures = (t: CircuitTask, c: Circuit): string[] =>
   (t.kind === "electric" ? gradeElectric(c, t.checks, switchIds(t)) : gradeLogic(c, t, lib).results).filter((x) => !x.ok).map((x) => x.message);
 
-describe.each(LESSONS.flatMap((l) => l.tasks.map((t, i) => [`${l.id} 과제 ${i + 1}`, t] as const)))("%s", (_name, t) => {
+const circuitTasks = LESSONS.flatMap((l) => l.tasks.map((t, i) => [`${l.id} 과제 ${i + 1}` as string, t] as const)).filter(
+  (x): x is readonly [string, CircuitTask] => x[1].kind !== "verilog",
+);
+const verilogTasks = LESSONS.flatMap((l) => l.tasks.map((t, i) => [`${l.id} 과제 ${i + 1}` as string, t] as const)).filter(
+  (x): x is readonly [string, VerilogTask] => x[1].kind === "verilog",
+);
+
+describe.each(verilogTasks)("%s (Verilog)", (_name, t) => {
+  test("모범 답안은 통과한다", () => {
+    const g = gradeVerilog(t.reference, t);
+    expect(g.error?.message ?? null).toBeNull();
+    expect(g.passed).toBe(true);
+  });
+  test("오답은 하나 이상 있고, 각각 실패한다", () => {
+    expect(t.wrong.length).toBeGreaterThanOrEqual(1);
+    for (const w of t.wrong) expect(gradeVerilog(w, t).passed, w).toBe(false);
+  });
+  test("뼈대는 문법이 맞고, 그대로 내면 실패한다", () => {
+    expect(() => parse(t.skeleton)).not.toThrow();
+    expect(gradeVerilog(t.skeleton, t).passed).toBe(false);
+  });
+  test("입력 비트 합이 10 이하이고 기대값이 출력 너비 안에 있다", () => {
+    for (const i of verilogCombos(t)) {
+      const o = t.spec(i);
+      for (const p of t.outputs) expect(o[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
+    }
+  });
+});
+
+describe.each(circuitTasks)("%s", (_name, t) => {
   test("모범 답안은 모든 검사를 통과한다", () => {
     expect(failures(t, t.reference)).toEqual([]);
   });
