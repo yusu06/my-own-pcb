@@ -195,3 +195,29 @@ describe("기본 D 플립플롭", () => {
     expect(nandCost(ckt(["f:dff"], []), noLib)).toBe(9);
   });
 });
+
+describe("기본 D 플립플롭: 전원 직후", () => {
+  test("처음부터 clk가 1이어도 에지가 아니다", () => {
+    const c = ckt(["d:in", "clk:in", "f:dff", "q:out"], ["d.y~f.d", "clk.y~f.clk", "f.q~q.a"]);
+    expect(simulate(c, { d: 1, clk: 1 }, noLib).out.q).toBe(0);
+  });
+
+  test("교과서식 리플 업카운터(clk = NOT q0)가 첫 에지 전에 뒤집히지 않는다", () => {
+    // f2의 clk는 NOT q0이라 전원 직후 1 — 이것을 에지로 보면 q1이 처음부터 뒤집힌다
+    const c = ckt(
+      ["clk:in", "f1:dff", "f2:dff", "n1:nand", "n2:nand", "n3:nand", "q0:out", "q1:out"],
+      [
+        "clk.y~f1.clk", "f1.q~n1.a", "f1.q~n1.b", "n1.y~f1.d",
+        "f1.q~n2.a", "f1.q~n2.b", "n2.y~f2.clk", "f2.q~n3.a", "f2.q~n3.b", "n3.y~f2.d",
+        "f1.q~q0.a", "f2.q~q1.a",
+      ],
+    );
+    let prev: Record<string, 0 | 1 | "X"> | undefined;
+    const counts = [0, 1, 0, 1, 0, 1, 0, 1].map((clk) => {
+      const r = simulate(c, { clk: clk as 0 | 1 }, noLib, prev);
+      prev = r.net;
+      return (r.out.q1 as number) * 2 + (r.out.q0 as number);
+    });
+    expect(counts).toEqual([0, 1, 1, 2, 2, 3, 3, 0]);
+  });
+});

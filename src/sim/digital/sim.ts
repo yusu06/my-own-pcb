@@ -97,7 +97,8 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
   for (const k of f.keys) val.set(find(k), prev?.[k] ?? val.get(find(k)) ?? 0);
   // 플립플롭 상태: 저장된 q와 직전 clk(전원 직후 0)
   const ffQ: Bit[] = f.dffs.map((d) => prev?.[d.q] ?? 0);
-  const ffClk: Bit[] = f.dffs.map((d) => prev?.[d.clk] ?? 0);
+  // 이전 값이 없으면(전원 직후) 처음 안정된 clk 값을 "직전 clk"로 둔다 — 전원을 켠 것은 에지가 아니다
+  const ffClk: (Bit | null)[] = f.dffs.map((d) => prev?.[d.clk] ?? null);
   const setFixed = (m: Map<string, Bit>) => {
     for (const [k, id] of f.sources) m.set(find(k), inputs[id] ?? "X");
     // clk가 정해지지 않으면(연결 안 됨) q도 정해지지 않는다
@@ -130,6 +131,7 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
   };
   while (settle()) {
     const clkNow = f.dffs.map((d) => val.get(find(d.clk))!);
+    clkNow.forEach((v, i) => (ffClk[i] ??= v));
     const fired = f.dffs.flatMap((_, i) => (ffClk[i] === 0 && clkNow[i] === 1 ? [i] : []));
     const ds = fired.map((i) => val.get(find(f.dffs[i].d))!);
     clkNow.forEach((v, i) => (ffClk[i] = v));

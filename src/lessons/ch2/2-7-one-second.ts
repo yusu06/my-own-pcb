@@ -24,7 +24,7 @@ export const lesson: Lesson = {
     from: "주방 가전 회사 ‘따끈’",
     request:
       "지난번 타이머는 클럭마다 1씩 줄어서, 1ms 클럭에 연결하니 1초가 아니라 1ms마다 줄어들었어요. 1ms 클럭에서 정확히 1초마다 한 번씩 ‘째깍’ 신호를 만들어 주세요.",
-    requirements: ["클럭 1주기 = 1ms(1000Hz)", "1000주기마다 tick = 1을 한 주기 동안", "rst = 1이면 처음부터"],
+    requirements: ["그리기: 둘째 플립플롭은 첫째 q가 올라갈 때 바뀐다", "클럭 1주기 = 1ms(1000Hz)", "1000주기마다 tick = 1을 한 주기 동안", "rst = 1이면 처음부터"],
   },
   concepts: [
     {
@@ -49,7 +49,7 @@ export const lesson: Lesson = {
     {
       kind: "logic",
       title: "리플 분주기 그리기",
-      goal: "기본 D 플립플롭 2개와 NOT 2개로, clk보다 4배 느리게 깜빡이는 slow를 만드세요.",
+      goal: "기본 D 플립플롭 2개와 NOT 2개로, clk보다 4배 느리게 깜빡이는 slow를 만드세요. 각 플립플롭은 NOT q를 자기 d로 받고, 둘째 플립플롭의 clk는 첫째의 q에, slow는 둘째의 q에 이어요(타임라인은 이 연결의 박자로 채점해요).",
       palette: [
         { id: "dff", kind: "dff", label: "D 플립플롭(기본)", multi: true },
         { id: "not", kind: "chip", chip: "not", label: "NOT", multi: true },
