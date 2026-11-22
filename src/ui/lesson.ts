@@ -7,7 +7,7 @@ import { h } from "./dom";
 import { warningBar } from "./home";
 import { renderQuiz } from "./quiz-view";
 import { gateFigure } from "./figures";
-import { renderElectricTask } from "./task-electric";
+import { renderCircuitTask } from "./task-circuit";
 
 export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void {
   const rich = (s: string) => renderRich(s, ctx.showTerm);
@@ -53,7 +53,7 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
       case "realWorld":
         return card(lesson.realWorld[s.i], "🔍 실제 기기에서는");
       case "task":
-        return renderElectricTask(ctx, lesson, s.i, draw);
+        return renderCircuitTask(ctx, lesson, s.i, draw);
       case "quiz":
         return h("section", {}, h("div", { class: "kicker" }, "📝 마무리 퀴즈"), renderQuiz(ctx, lesson, draw));
       case "done": {

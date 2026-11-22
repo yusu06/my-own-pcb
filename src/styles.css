@@ -256,6 +256,7 @@ svg.circuit .fallback .chip-name { fill: var(--muted); }
 .test-results:empty { display: none; }
 .test-results { margin-top: 12px; display: grid; gap: 8px; }
 .test-results .pass { color: var(--ok); font-weight: 700; margin: 0; }
+.test-results .note { margin: 0; font-weight: 600; }
 .test-results .fail { color: var(--bad); font-weight: 700; margin: 0; }
 .check { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 0.92rem; }
 .check.bad { border-color: var(--bad); }
