@@ -5,6 +5,7 @@ import { renderRich } from "../rich";
 import type { Ctx } from "./app";
 import { mountCodeEditor } from "./code-editor";
 import { h } from "./dom";
+import { renderTimeline } from "./timeline";
 
 const HINT_AFTER = 3;
 const ANSWER_AFTER = 5;
@@ -58,6 +59,20 @@ export function renderVerilogTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
       results.replaceChildren(
         h("p", { class: "fail" }, "❌ 코드를 실행할 수 없어요."),
         h("div", { class: "check bad" }, h("span", {}, g.error.message)),
+      );
+      return;
+    }
+    if (g.timeline) {
+      const n = g.timeline[0]?.values.length ?? 0;
+      const first = Array.from({ length: n }, (_, k) => k).find((k) => g.timeline!.some((r) => r.bad?.[k])) ?? 0;
+      results.replaceChildren(
+        h("p", { class: g.passed ? "pass" : "fail" }, g.passed ? `✅ ${g.total}단계 모두 맞혔어요!` : "❌ 조건과 다르게 동작하는 단계가 있어요."),
+        h(
+          "div",
+          { class: "check " + (g.passed ? "ok" : "bad") },
+          h("span", {}, g.passed ? "단계별 신호를 보여 줄게요." : `${first + 1}번째 단계부터 달라요. 빨간 칸은 ‘받은 값→기대 값’이에요.`),
+          renderTimeline(g.timeline),
+        ),
       );
       return;
     }

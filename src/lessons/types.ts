@@ -80,8 +80,8 @@ export interface VerilogPort {
   width: number;
 }
 
-/** 사용자가 Verilog 모듈을 쓰는 과제. 앱이 모든 입력 조합으로 시험한다. */
-export interface VerilogTask {
+/** 사용자가 Verilog 모듈을 쓰는 과제(공통 부분) */
+interface VerilogTaskBase {
   kind: "verilog";
   title: string;
   goal: string;
@@ -93,12 +93,24 @@ export interface VerilogTask {
   outputs: VerilogPort[];
   /** 결과표에 보일 이름(예: { d: "층 번호" }) */
   labels?: Record<string, string>;
-  /** 기대 출력. 해석기와 따로 TS로 써서 해석기 버그가 모범 답안과 같이 숨지 않게 한다 */
-  spec(i: Record<string, number>): Record<string, number>;
   reference: string;
   wrong: string[];
 }
 
+/** 조합 과제: 앱이 모든 입력 조합으로 시험한다 */
+export interface VerilogCombTask extends VerilogTaskBase {
+  /** 기대 출력. 해석기와 따로 TS로 써서 해석기 버그가 모범 답안과 같이 숨지 않게 한다 */
+  spec(i: Record<string, number>): Record<string, number>;
+  seq?: undefined;
+}
+
+/** 순차 과제: 입력 각본을 차례로 넣고 TS 상태 모델과 단계마다 비교한다 */
+export interface VerilogSeqTask extends VerilogTaskBase {
+  seq: SeqSpec<number>;
+  spec?: undefined;
+}
+
+export type VerilogTask = VerilogCombTask | VerilogSeqTask;
 export type CircuitTask = ElectricTask | LogicTask;
 export type Task = CircuitTask | VerilogTask;
 

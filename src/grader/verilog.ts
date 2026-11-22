@@ -1,5 +1,6 @@
-import type { VerilogTask } from "../lessons/types";
+import type { VerilogCombTask, VerilogTask } from "../lessons/types";
 import { compile, VerilogError } from "../sim/verilog";
+import type { TimeRow } from "./electric";
 
 export interface VRow {
   inputs: Record<string, number>;
@@ -13,13 +14,15 @@ export interface VerilogGrade {
   rows: VRow[];
   total: number;
   passed: boolean;
+  /** 순차 과제 타임라인(이때 rows는 비어 있다) */
+  timeline?: TimeRow[];
 }
 
 const MAX_ROWS = 16;
 export const MAX_INPUT_BITS = 10;
 
 /** 입력 비트를 모두 이은 수 n을 입력별 값으로 나눈다(첫 입력이 최상위) */
-export function verilogCombos(task: VerilogTask): Record<string, number>[] {
+export function verilogCombos(task: VerilogCombTask): Record<string, number>[] {
   const bits = task.inputs.reduce((n, p) => n + p.width, 0);
   if (bits > MAX_INPUT_BITS) throw new Error(`${task.title}: 입력 비트가 ${bits}개라 너무 많다`);
   return Array.from({ length: 2 ** bits }, (_, n) => {
@@ -47,8 +50,28 @@ export function gradeVerilog(src: string, task: VerilogTask): VerilogGrade {
     const extra = have.find((h) => !want.some((w) => w.name === h.name));
     if (extra) return bad(new VerilogError(1, `포트 ‘${extra.name}’은(는) 이 과제에 없어요. 뼈대 코드의 포트 목록을 그대로 써 주세요.`));
 
+    if (task.seq) {
+      const { steps, from = 0 } = task.seq;
+      const s = d.sim();
+      const m = task.seq.model();
+      const got = steps.map((i) => s.step(i));
+      const want = steps.map((i) => m(i));
+      const label = (n: string) => task.labels?.[n] ?? n;
+      const timeline: TimeRow[] = [
+        ...task.inputs.map((p) => ({ name: p.name, label: label(p.name), values: steps.map((i) => i[p.name] ?? 0) })),
+        ...task.outputs.map((p) => {
+          const values = got.map((o) => o[p.name]);
+          const expect = want.map((o) => o[p.name]);
+          return { name: p.name, label: label(p.name), values, expect, bad: values.map((v, k) => k >= from && v !== expect[k]) };
+        }),
+      ];
+      const passed = timeline.every((r) => !r.bad?.some(Boolean));
+      return { error: null, rows: [], total: steps.length - from, passed, timeline };
+    }
+
+    const spec = task.spec;
     const all = verilogCombos(task).map((inputs) => {
-      const expect = task.spec(inputs);
+      const expect = spec(inputs);
       const got = d.run(inputs);
       return { inputs, expect, got, ok: task.outputs.every((o) => got[o.name] === expect[o.name]) };
     });

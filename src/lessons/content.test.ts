@@ -53,7 +53,16 @@ describe.each(verilogTasks)("%s (Verilog)", (_name, t) => {
     expect(() => parse(t.skeleton)).not.toThrow();
     expect(gradeVerilog(t.skeleton, t).passed).toBe(false);
   });
-  test("입력 비트 합이 10 이하이고 기대값이 출력 너비 안에 있다", () => {
+  test("입력·기대값이 포트 너비 안에 있다", () => {
+    if (t.seq) {
+      const m = t.seq.model();
+      for (const i of t.seq.steps) {
+        for (const p of t.inputs) expect(i[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
+        const o = m(i);
+        for (const p of t.outputs) expect(o[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
+      }
+      return;
+    }
     for (const i of verilogCombos(t)) {
       const o = t.spec(i);
       for (const p of t.outputs) expect(o[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
