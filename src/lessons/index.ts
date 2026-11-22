@@ -22,6 +22,9 @@ import { lesson as l2_2 } from "./ch2/2-2-clock";
 import { lesson as l2_3 } from "./ch2/2-3-d-flipflop";
 import { lesson as l2_4 } from "./ch2/2-4-debounce";
 import { lesson as l2_5 } from "./ch2/2-5-register";
+import { lesson as l2_6 } from "./ch2/2-6-microwave-timer";
+import { lesson as l2_7 } from "./ch2/2-7-one-second";
+import { lesson as l2_8 } from "./ch2/2-8-led-sign";
 
 export const CHAPTERS: { n: number; title: string }[] = [
   { n: 0, title: "스위치에서 게이트까지" },
@@ -35,7 +38,7 @@ export const CHAPTERS: { n: number; title: string }[] = [
 ];
 
 /** 진행 순서대로. 배포된 id는 바꾸지 않는다. */
-export const LESSONS: Lesson[] = [l0_1, l0_2, l0_3, l0_4, l0_5, l0_6, l0_7, l1_1, l1_2, l1_3, l1_4, l1_5, l1_6, l1_7, l1_8, l1_9, l1_10, l1_11, l2_1, l2_2, l2_3, l2_4, l2_5];
+export const LESSONS: Lesson[] = [l0_1, l0_2, l0_3, l0_4, l0_5, l0_6, l0_7, l1_1, l1_2, l1_3, l1_4, l1_5, l1_6, l1_7, l1_8, l1_9, l1_10, l1_11, l2_1, l2_2, l2_3, l2_4, l2_5, l2_6, l2_7, l2_8];
 
 export function findLesson(id: string): Lesson | undefined {
   return LESSONS.find((l) => l.id === id);

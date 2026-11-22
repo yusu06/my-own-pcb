@@ -54,4 +54,7 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   register: { term: "레지스터", short: "여러 비트를 한꺼번에 저장하는 플립플롭 묶음. 쓰기 허용(enable) 신호가 1일 때만 새 값을 받는 경우가 많다." },
   period: { term: "주기", short: "클럭이 0과 1을 한 번씩 거쳐 처음으로 돌아오는 데 걸리는 시간." },
   frequency: { term: "주파수", short: "1초에 클럭이 몇 번 반복되는지. 단위는 헤르츠(Hz). 주기의 역수다(1 ÷ 주기)." },
+  counter: { term: "카운터", short: "클럭 에지마다 값을 하나씩 늘리거나 줄이는 레지스터. 시간·횟수를 센다." },
+  divider: { term: "분주기", short: "빠른 클럭을 세어서 더 느린 박자를 만드는 회로. 예: 1000번 셀 때마다 한 번 → 1/1000 주파수." },
+  "shift-register": { term: "시프트 레지스터", short: "클럭 에지마다 저장된 비트를 한 칸씩 옆으로 밀어 옮기는 레지스터. 줄지어 선 플립플롭." },
 };
