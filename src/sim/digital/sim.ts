@@ -24,6 +24,8 @@ export interface DigitalResult {
 }
 
 const MAX_DEPTH = 8;
+/** 펼친 NAND가 이보다 많으면 더 펼치지 않는다(손상된 부품함이 폰을 멈추지 않게) */
+const MAX_NANDS = 5000;
 const MAX_STEPS = 1000;
 
 interface Flat {
@@ -38,7 +40,8 @@ interface Flat {
 /** 칩을 NAND까지 펼친다. 칩 안 부품 id에는 `칩id/` 접두어가 붙는다. */
 function flatten(c: Circuit, lib: ChipLib): Flat {
   const f: Flat = { keys: [], links: [], nands: [], sources: new Map(), missing: null };
-  const walk = (circ: Circuit, pre: string, depth: number) => {
+  // stack = 지금 펼치는 중인 칩(이름@버전). 같은 칩이 다시 나오면 순환이므로 펼치지 않는다.
+  const walk = (circ: Circuit, pre: string, depth: number, stack: string[]) => {
     for (const p of circ.parts) for (const pin of pinNames(p)) f.keys.push(`${pre}${p.id}.${pin}`);
     for (const w of circ.wires) f.links.push([`${pre}${w.a.part}.${w.a.pin}`, `${pre}${w.b.part}.${w.b.pin}`]);
     for (const p of circ.parts) {
@@ -46,19 +49,21 @@ function flatten(c: Circuit, lib: ChipLib): Flat {
       if (p.kind === "nand") f.nands.push({ a: k("a"), b: k("b"), y: k("y") });
       else if (p.kind === "in" && depth === 0) f.sources.set(k("y"), p.id);
       else if (p.kind === "chip" && p.chip) {
-        const found = depth < MAX_DEPTH ? lib(p.chip) : null;
+        const key = `${p.chip.name}@${p.chip.v}`;
+        const ok = depth < MAX_DEPTH && !stack.includes(key) && f.nands.length <= MAX_NANDS;
+        const found = ok ? lib(p.chip) : null;
         if (!found) {
           f.missing ??= p.chip.name;
           continue;
         }
         const inner = `${pre}${p.id}/`;
-        walk(found.def.circuit, inner, depth + 1);
+        walk(found.def.circuit, inner, depth + 1, [...stack, key]);
         for (const n of p.chip.inputs) if (found.def.inputs.includes(n)) f.links.push([k(n), `${inner}${n}.y`]);
         for (const n of p.chip.outputs) if (found.def.outputs.includes(n)) f.links.push([k(n), `${inner}${n}.a`]);
       }
     }
   };
-  walk(c, "", 0);
+  walk(c, "", 0, []);
   return f;
 }
 

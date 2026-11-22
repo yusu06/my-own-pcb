@@ -30,8 +30,9 @@ export function migrate(raw: unknown): SaveData {
     if (!step) throw new SaveError(`버전 ${v} 데이터는 옮길 수 없어요.`);
     d = { ...step(d), version: v + 1 };
   }
-  const chipsOk = isObj(d.chips) && Object.values(d.chips).every(Array.isArray);
-  if (!isObj(d.progress) || !isObj(d.work) || !chipsOk || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
+  // 부품함이 망가져도 진행 기록은 지킨다: 배열이 아닌 항목만 버린다(빠진 부품은 기본 부품으로 대체된다)
+  d.chips = Object.fromEntries(Object.entries(isObj(d.chips) ? d.chips : {}).filter(([, v]) => Array.isArray(v)));
+  if (!isObj(d.progress) || !isObj(d.work) || !isObj(d.settings) || !THEMES.includes(d.settings.theme as string)) {
     throw new SaveError("저장 데이터가 손상됐어요.");
   }
   for (const [id, p] of Object.entries(d.progress)) {

@@ -59,3 +59,18 @@ test("costRequired: 목표를 넘으면 실패, 맞으면 star", () => {
   expect(fails(soft)).toEqual([]);
   expect(soft.star).toBe(false);
 });
+
+test("costRequired는 부품함 부품을 기본 부품 원가로 센다(예전에 비싸게 만든 부품 때문에 막히지 않게)", () => {
+  // 사용자가 NAND 4개로 만든 AND(맞지만 비쌈)
+  const fatAnd = {
+    inputs: ["a", "b"], outputs: ["y"],
+    circuit: ckt(["a:in", "b:in", "n1:nand", "n2:nand", "n3:nand", "n4:nand", "y:out"],
+      ["a.y~n1.a", "b.y~n1.b", "n1.y~n2.a", "n1.y~n2.b", "n2.y~n3.a", "n2.y~n3.b", "n3.y~n4.a", "n3.y~n4.b", "n4.y~y.a"]),
+  };
+  const myLib = makeLib({ and: [fatAnd] });
+  const c: Circuit = { ...ckt(IO, ["a.y~and1.a", "b.y~and1.b", "and1.y~y.a"]), parts: [...ckt(IO, []).parts, { id: "and1", kind: "chip", x: 0, y: 0, rot: 0, chip: { name: "and", v: 0, inputs: ["a", "b"], outputs: ["y"] } }] };
+  const t = { ...task, palette: [{ id: "and", kind: "chip" as const, chip: "and" as const, label: "AND", multi: true }], maxCost: 2, costRequired: true };
+  const r = gradeLogic(c, t, myLib);
+  expect(r.cost).toBe(4);
+  expect(fails(r)).toEqual([]);
+});

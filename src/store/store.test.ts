@@ -174,7 +174,13 @@ test("v2 샘플 파일이 v3로 옮겨지고 부품함이 생긴다", () => {
   expect(d.chips).toEqual({});
 });
 
-test("부품함이 객체가 아니면 손상으로 본다", () => {
-  expect(() => migrate({ ...emptySave(), chips: [] })).toThrow(SaveError);
-  expect(() => migrate({ ...emptySave(), chips: { and: "x" } })).toThrow(SaveError);
+
+test("부품함 일부가 망가져도 진행 기록은 지킨다", () => {
+  const base = { ...emptySave(), progress: { "0-1": { status: "done", step: 5, quizCorrect: [0], tasksDone: [0], updatedAt: 1 } } };
+  const d = migrate({ ...base, chips: { and: "x", not: [] } });
+  expect(d.progress["0-1"].status).toBe("done");
+  expect(d.chips).toEqual({ not: [] });
+  const { chips: _drop, ...noChips } = base;
+  expect(migrate(noChips).chips).toEqual({});
+  expect(migrate({ ...base, chips: [] }).chips).toEqual({});
 });

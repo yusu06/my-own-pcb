@@ -1,5 +1,5 @@
 import type { LogicTask } from "../lessons/types";
-import { CHIP_LABEL } from "../sim/digital/chips";
+import { CHIP_LABEL, makeLib } from "../sim/digital/chips";
 import { nandCost, simulate, type ChipLib, type DigitalResult } from "../sim/digital/sim";
 import type { Circuit } from "../sim/electric/types";
 import type { CheckResult, LogicRow } from "./electric";
@@ -44,7 +44,11 @@ export function gradeLogic(c: Circuit, t: LogicTask, lib: ChipLib): LogicGrade {
 
   const results = [truth];
   if (t.costRequired && t.maxCost !== undefined) {
-    results.push({ ok: cost <= t.maxCost, message: `NAND ${cost}개 — 목표 ${t.maxCost}개 이하` });
+    // 통과 조건은 회로 구조를 본다: 부품함 부품은 기본 부품 원가로 센다
+    // (예전 단원에서 비싸게 만든 부품 때문에 이 단원이 막히지 않게)
+    const std = nandCost(c, makeLib({}));
+    const note = std !== cost ? ` (부품함 부품을 기본 원가로 센 값. 지금 부품으로는 ${cost}개)` : "";
+    results.push({ ok: std <= t.maxCost, message: `NAND ${std}개 — 목표 ${t.maxCost}개 이하${note}` });
   }
   return { results, cost, star: truth.ok && star };
 }

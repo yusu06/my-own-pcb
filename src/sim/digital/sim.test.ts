@@ -80,3 +80,34 @@ describe("칩", () => {
     expect(Number.isFinite(nandCost(useChip("self"), selfLib))).toBe(true);
   });
 });
+
+describe("손상된 부품함 방어", () => {
+  const ioParts = ckt(["a:in", "y:out"], []).parts;
+  /** 자기 자신(같은 이름·버전)을 k번 품은 칩: 입력 → 첫 칩 → … → 마지막 칩 → 출력 */
+  const selfChip = (k: number): ChipDef => {
+    const inner: Part[] = Array.from({ length: k }, (_, i) => ({ id: `c${i}`, kind: "chip", x: 0, y: 0, rot: 0, chip: { name: "self", v: 0, inputs: ["a"], outputs: ["y"] } }));
+    const wires = [{ a: { part: "a", pin: "y" }, b: { part: "c0", pin: "a" } }, ...inner.slice(1).map((p, i) => ({ a: { part: `c${i}`, pin: "y" }, b: { part: p.id, pin: "a" } })), { a: { part: `c${k - 1}`, pin: "y" }, b: { part: "y", pin: "a" } }];
+    return { inputs: ["a"], outputs: ["y"], circuit: { parts: [...ioParts, ...inner], wires } };
+  };
+  const top = (name: string): Circuit => ({
+    parts: [...ckt(["i:in", "o:out"], []).parts, { id: "c", kind: "chip", x: 0, y: 0, rot: 0, chip: { name, v: 0, inputs: ["a"], outputs: ["y"] } }],
+    wires: [{ a: { part: "i", pin: "y" }, b: { part: "c", pin: "a" } }, { a: { part: "c", pin: "y" }, b: { part: "o", pin: "a" } }],
+  });
+
+  test("자기 자신을 여러 번 품은 칩도 빨리 끝난다(순환 감지)", () => {
+    const lib: ChipLib = (ref) => (ref.name === "self" ? { def: selfChip(6), fallback: false } : null);
+    const t0 = performance.now();
+    const r = simulate(top("self"), { i: 1 }, lib);
+    nandCost(top("self"), lib);
+    expect(performance.now() - t0).toBeLessThan(100);
+    expect(r.missingChip).toBe("self");
+  });
+
+  test("두 칩이 서로를 품는 순환도 막는다", () => {
+    const pair = (other: string): ChipDef => ({ ...selfChip(2), circuit: { ...selfChip(2).circuit, parts: selfChip(2).circuit.parts.map((p) => (p.chip ? { ...p, chip: { ...p.chip, name: other } } : p)) } });
+    const lib: ChipLib = (ref) => (ref.name === "p" ? { def: pair("q"), fallback: false } : ref.name === "q" ? { def: pair("p"), fallback: false } : null);
+    const t0 = performance.now();
+    expect(simulate(top("p"), { i: 1 }, lib).missingChip).not.toBeNull();
+    expect(performance.now() - t0).toBeLessThan(100);
+  });
+});
