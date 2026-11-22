@@ -9,6 +9,14 @@ export interface Card {
   figure?: "and" | "or" | "not";
   /** 그림 대신 보여 줄 타임라인(신호 × 단계) */
   timeline?: TimeRow[];
+  /** FSM 상태도 그림 */
+  states?: StateDiagram;
+}
+
+/** 상태도: x·y는 0~100 비율 */
+export interface StateDiagram {
+  nodes: { id: string; label: string; x: number; y: number }[];
+  edges: { from: string; to: string; label: string }[];
 }
 
 export type QuizItem =

@@ -16,6 +16,7 @@ export const PIN_OFFSET: Record<PartKind, Record<string, [number, number]>> = {
   nand: { a: [-2, -1], b: [-2, 1], y: [2, 0] },
   in: { y: [2, 0] },
   out: { a: [-2, 0] },
+  dff: { d: [-2, -1], clk: [-2, 1], q: [2, 0] },
   chip: {}, // chipPins로 계산
 };
 
@@ -89,7 +90,7 @@ export function partBox(p: Part): [number, number, number, number] {
   const h = p.kind === "chip" ? chipSize(p).h / 2 : 0;
   const local: [number, number, number, number] =
     p.kind === "npn" ? [-1.2, -1.3, 1.6, 1.3]
-    : p.kind === "nand" ? [-1.4, -1.4, 1.4, 1.4]
+    : p.kind === "nand" || p.kind === "dff" ? [-1.4, -1.4, 1.4, 1.4]
     : p.kind === "chip" ? [-1.5, -h, 1.5, h]
     : [-1.4, -0.9, 1.4, 0.9];
   const [a, b] = [rotate([local[0], local[1]], p.rot), rotate([local[2], local[3]], p.rot)];

@@ -12,6 +12,7 @@ export const PINS: Record<PartKind, string[]> = {
   nand: ["a", "b", "y"],
   in: ["y"],
   out: ["a"],
+  dff: ["d", "clk", "q"],
   chip: [], // 부품마다 다르다: pinNames 사용
 };
 

@@ -76,6 +76,14 @@ function logicBody(p: Part, bit: Bit): SVGElement[] {
         path("M -20 -24 L -2 -24 A 24 24 0 0 1 -2 24 L -20 24 Z", "gate"),
         svg("circle", { cx: 27, cy: 0, r: 5, class: "gate" }),
       ];
+    case "dff":
+      // 클럭 핀에는 작은 ▷ 표시
+      return [
+        line(-40, -20, -24, -20), line(-40, 20, -24, 20), line(24, 0, 40, 0),
+        svg("rect", { x: -24, y: -30, width: 48, height: 60, rx: 4, class: "gate" }),
+        path("M -24 13 L -16 20 L -24 27", "gate"),
+        text(0, -2, "D FF", "chip-name"), text(-15, -16, "d", "chip-pin"), text(16, 4, "q", "chip-pin"),
+      ];
     case "in":
       return [line(16, 0, 40, 0), svg("rect", { x: -16, y: -14, width: 32, height: 28, rx: 6, class: "in-box" }), text(0, 6, String(bit), "bit")];
     case "out":
@@ -95,7 +103,7 @@ function logicBody(p: Part, bit: Bit): SVGElement[] {
   }
 }
 
-const LOGIC = ["nand", "in", "out", "chip"];
+const LOGIC = ["nand", "in", "out", "chip", "dff"];
 
 export function partSymbol(p: Part, r: PartResult | undefined, pressed: boolean, logic?: { bit: Bit; fallback: boolean }): SVGGElement {
   const cls = `part k-${p.kind}${r?.on ? " on" : ""}${r?.burnt ? " is-burnt" : ""}${logic?.fallback ? " fallback" : ""}${logic?.bit === "X" ? " is-x" : ""}`;

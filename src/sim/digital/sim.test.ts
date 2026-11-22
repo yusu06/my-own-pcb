@@ -145,3 +145,79 @@ describe('래치(피드백)', () => {
     expect(simulate(c, {}, noLib).oscillating).toBe(true);
   });
 });
+
+describe("기본 D 플립플롭", () => {
+  const go = (c: Circuit, steps: Record<string, 0 | 1>[], out: string[]) => {
+    let prev: Record<string, 0 | 1 | "X"> | undefined;
+    return steps.map((s) => {
+      const r = simulate(c, s, noLib, prev);
+      expect(r.oscillating).toBe(false);
+      prev = r.net;
+      return out.map((o) => r.out[o]);
+    });
+  };
+  const clk2 = (vals: Record<string, 0 | 1>[]) => vals.flatMap((v) => [{ ...v, clk: 0 as const }, { ...v, clk: 1 as const }]);
+
+  test("상승 에지에서만 d를 잡는다", () => {
+    const c = ckt(["d:in", "clk:in", "f:dff", "q:out"], ["d.y~f.d", "clk.y~f.clk", "f.q~q.a"]);
+    const s = (d: 0 | 1, clk: 0 | 1) => ({ d, clk });
+    expect(go(c, [s(1, 0), s(1, 1), s(0, 1), s(0, 0), s(0, 1)], ["q"]).flat()).toEqual([0, 1, 1, 1, 0]);
+  });
+
+  test("시프트 레지스터는 부품 순서와 상관없이 한 칸씩", () => {
+    const IO = ["s:in", "clk:in", "q0:out", "q1:out", "q2:out"];
+    const W = ["s.y~f1.d", "f1.q~f2.d", "f2.q~f3.d", "clk.y~f1.clk", "clk.y~f2.clk", "clk.y~f3.clk", "f1.q~q0.a", "f2.q~q1.a", "f3.q~q2.a"];
+    const orders = [["f1", "f2", "f3"], ["f1", "f3", "f2"], ["f2", "f1", "f3"], ["f2", "f3", "f1"], ["f3", "f1", "f2"], ["f3", "f2", "f1"]];
+    const steps = clk2([{ s: 1 }, { s: 0 }, { s: 0 }, { s: 1 }]);
+    const want = go(ckt([...IO, "f1:dff", "f2:dff", "f3:dff"], W), steps, ["q0", "q1", "q2"]);
+    expect(want[3]).toEqual([0, 1, 0]); // 2주기 뒤 첫 s가 q1에
+    for (const o of orders) expect(go(ckt([...IO, ...o.map((f) => `${f}:dff`)], W), steps, ["q0", "q1", "q2"])).toEqual(want);
+  });
+
+  test("리플 분주기: clk 8주기에 q1은 8번, q2는 4번 바뀐다(1/4 주파수)", () => {
+    const c = ckt(
+      ["clk:in", "f1:dff", "f2:dff", "n1:nand", "n2:nand", "q1:out", "q2:out"],
+      ["clk.y~f1.clk", "f1.q~n1.a", "f1.q~n1.b", "n1.y~f1.d", "n1.y~f2.clk", "f2.q~n2.a", "f2.q~n2.b", "n2.y~f2.d", "f1.q~q1.a", "f2.q~q2.a"],
+    );
+    const rows = go(c, clk2(Array.from({ length: 8 }, () => ({}))), ["q1", "q2"]);
+    const changes = (j: number) => rows.filter((r, k) => k > 0 && r[j] !== rows[k - 1][j]).length;
+    expect([changes(0), changes(1)]).toEqual([8, 4]);
+  });
+
+  test("clk가 연결되지 않으면 q는 X, 멈춤 없음", () => {
+    const c = ckt(["d:in", "f:dff", "q:out"], ["d.y~f.d", "f.q~q.a"]);
+    const r = simulate(c, { d: 1 }, noLib);
+    expect(r.oscillating).toBe(false);
+    expect(r.out.q).toBe("X");
+  });
+
+  test("원가: 기본 D 플립플롭 하나 = NAND 9개", () => {
+    expect(nandCost(ckt(["f:dff"], []), noLib)).toBe(9);
+  });
+});
+
+describe("기본 D 플립플롭: 전원 직후", () => {
+  test("처음부터 clk가 1이어도 에지가 아니다", () => {
+    const c = ckt(["d:in", "clk:in", "f:dff", "q:out"], ["d.y~f.d", "clk.y~f.clk", "f.q~q.a"]);
+    expect(simulate(c, { d: 1, clk: 1 }, noLib).out.q).toBe(0);
+  });
+
+  test("교과서식 리플 업카운터(clk = NOT q0)가 첫 에지 전에 뒤집히지 않는다", () => {
+    // f2의 clk는 NOT q0이라 전원 직후 1 — 이것을 에지로 보면 q1이 처음부터 뒤집힌다
+    const c = ckt(
+      ["clk:in", "f1:dff", "f2:dff", "n1:nand", "n2:nand", "n3:nand", "q0:out", "q1:out"],
+      [
+        "clk.y~f1.clk", "f1.q~n1.a", "f1.q~n1.b", "n1.y~f1.d",
+        "f1.q~n2.a", "f1.q~n2.b", "n2.y~f2.clk", "f2.q~n3.a", "f2.q~n3.b", "n3.y~f2.d",
+        "f1.q~q0.a", "f2.q~q1.a",
+      ],
+    );
+    let prev: Record<string, 0 | 1 | "X"> | undefined;
+    const counts = [0, 1, 0, 1, 0, 1, 0, 1].map((clk) => {
+      const r = simulate(c, { clk: clk as 0 | 1 }, noLib, prev);
+      prev = r.net;
+      return (r.out.q1 as number) * 2 + (r.out.q0 as number);
+    });
+    expect(counts).toEqual([0, 1, 1, 2, 2, 3, 3, 0]);
+  });
+});
