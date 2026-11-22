@@ -163,20 +163,29 @@ class Parser {
     }
     if (this.is("always")) {
       this.next();
-      if (!this.accept("@")) this.fail("always 뒤에는 @(*)를 써 주세요.");
+      if (!this.accept("@")) this.fail("always 뒤에는 @(*) 또는 @(posedge clk)를 써 주세요.");
+      let edges: string[] | null = null;
       if (!this.accept("*")) {
         this.expect("(");
-        if (!this.accept("*")) {
+        if (this.is("posedge") || this.is("negedge")) {
+          edges = [];
+          do {
+            if (this.is("negedge")) this.fail("negedge는 지원하지 않아요. 이 앱에서는 posedge만 써요.");
+            if (!this.accept("posedge")) this.fail("posedge 블록에는 posedge 신호만 쓸 수 있어요. 예: @(posedge clk or posedge rst)");
+            if (this.tok.k !== "id") this.fail("posedge 뒤에는 신호 이름을 써 주세요. 예: posedge clk");
+            edges.push(this.next().v);
+          } while (this.accept("or") || this.accept(","));
+        } else if (!this.accept("*")) {
           // @(a or b) 같은 목록도 조합 회로로 본다
           while (!this.is(")")) {
-            if (this.is("posedge") || this.is("negedge")) this.fail("순차 회로(posedge·negedge)는 2장에서 배워요. 지금은 always @(*)만 써요.");
+            if (this.is("posedge") || this.is("negedge")) this.fail("posedge 블록에는 posedge 신호만 쓸 수 있어요. 예: @(posedge clk or posedge rst)");
             if (this.tok.k === "eof") this.expect(")");
             this.next();
           }
         }
         this.expect(")");
       }
-      return [{ t: "always", body: this.stmt(), line }];
+      return [{ t: "always", edges, body: this.stmt(), line }];
     }
     if (t.k === "id") {
       const module = this.next().v;
@@ -250,10 +259,11 @@ class Parser {
     if (this.is("else")) this.fail("else 앞에 짝이 되는 if가 없어요. (if 뒤에 문장이 여러 개면 begin ... end로 묶어요)");
     if (this.atEnd() || this.is("end") || this.is("endcase")) this.fail(`‘${this.tok.v}’ 앞에 문장이 빠졌어요.`);
     const lhs = this.lvalue();
-    if (!this.accept("=") && !this.accept("<=")) this.expect("=");
+    const nb = this.accept("<=");
+    if (!nb && !this.accept("=")) this.expect("=");
     const rhs = this.expr();
     this.expect(";");
-    return { t: "assign", lhs, rhs, line };
+    return { t: "assign", lhs, rhs, nb, line };
   }
 
   /** 대입 왼쪽: 이름, 비트·범위 선택, 연결 { } */

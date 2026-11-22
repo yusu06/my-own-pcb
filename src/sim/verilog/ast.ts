@@ -13,7 +13,8 @@ export type Stmt =
   | { t: "block"; body: Stmt[]; line: number }
   | { t: "if"; c: Expr; then: Stmt; else?: Stmt; line: number }
   | { t: "case"; e: Expr; items: { labels: Expr[] | null; body: Stmt }[]; line: number }
-  | { t: "assign"; lhs: Expr; rhs: Expr; line: number }
+  /** nb = 논블로킹(<=) */
+  | { t: "assign"; lhs: Expr; rhs: Expr; nb: boolean; line: number }
   | { t: "empty"; line: number };
 
 export interface Port {
@@ -29,7 +30,8 @@ export type Item =
   | { t: "decl"; kind: "wire" | "reg"; msb: number; lsb: number; names: string[]; init?: Expr; line: number }
   | { t: "param"; name: string; value: Expr; line: number }
   | { t: "assign"; lhs: Expr; rhs: Expr; line: number }
-  | { t: "always"; body: Stmt; line: number }
+  /** edges = posedge 신호들(null이면 조합 always @(*)) */
+  | { t: "always"; edges: string[] | null; body: Stmt; line: number }
   | { t: "instance"; module: string; name: string; conns: { port: string; expr: Expr | null; line: number }[]; line: number };
 
 export interface ModuleDecl {

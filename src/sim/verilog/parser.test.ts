@@ -116,7 +116,8 @@ test("오류: 줄 번호와 한국어 안내", () => {
   expect(err("module m(input a, output y);\n  assign y = a;\n")).toContain("endmodule");
   expect(err("module m(input a, output y);\n  initial y = 0;\nendmodule")).toContain("지원하지 않아요");
   expect(err("module m(input a, output y);\n  assign #5 y = a;\nendmodule")).toContain("지원하지 않아요");
-  expect(err("module m(input clk, output reg y);\n  always @(posedge clk) y <= 1;\nendmodule")).toContain("2장에서");
+  expect(err("module m(input clk, output reg y);\n  always @(negedge clk) y <= 1;\nendmodule")).toContain("negedge");
+  expect(err("module m(input clk, input d, output reg y);\n  always @(posedge clk or d) y <= 1;\nendmodule")).toContain("posedge");
   expect(err("")).toContain("module");
   expect(err("module m(input a, output [2:0] y);\n  assign y = 3'b129;\nendmodule")).toMatch(/^2번째 줄/);
   expect(err("module m(input a, output [2:0] y);\n  assign y = 3'd9;\nendmodule")).toContain("3비트");
@@ -124,4 +125,14 @@ test("오류: 줄 번호와 한국어 안내", () => {
   expect(err("module m(input a, output y);\n  assign y = (a & a;\nendmodule")).toContain(")");
   expect(err("module m(input [40:0] a, output y);\nendmodule")).toContain("32비트");
   expect(err("module m(input a, output y);\n  assign y = a % 2;\nendmodule")).toContain("2번째 줄");
+});
+
+test('always @(posedge ...) 에지 목록과 논블로킹 표시', () => {
+  const m = parse(`module m(input clk, input rst, input d, output reg q);
+  always @(posedge clk or posedge rst) q <= d;
+  always @(posedge clk, posedge rst) q = d;
+  always @(*) q = d;
+endmodule`).modules[0];
+  const al = m.items.map((i) => (i.t === 'always' ? [i.edges, i.body.t === 'assign' ? i.body.nb : null] : null));
+  expect(al).toEqual([[['clk', 'rst'], true], [['clk', 'rst'], false], [null, false]]);
 });
