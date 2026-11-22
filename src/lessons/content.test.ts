@@ -92,6 +92,12 @@ describe.each(circuitTasks)("%s", (_name, t) => {
       const ids = (k: string) => t.preset.parts.filter((p) => p.kind === k).map((p) => p.id);
       expect(ids("in")).toEqual(t.inputs);
       expect(ids("out")).toEqual(t.outputs);
+      if (t.seq) {
+        // 순차 과제: 진리표 대신 각본. 단계마다 모든 입력을 정한다
+        expect(t.expect).toEqual([]);
+        for (const s of t.seq.steps) expect(Object.keys(s).sort()).toEqual([...t.inputs].sort());
+        return;
+      }
       expect(t.expect).toHaveLength(1 << t.inputs.length);
       for (const row of t.expect) expect(row).toHaveLength(t.outputs.length);
     });

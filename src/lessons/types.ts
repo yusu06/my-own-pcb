@@ -1,4 +1,4 @@
-import type { ElectricCheck } from "../grader/electric";
+import type { ElectricCheck, TimeRow } from "../grader/electric";
 import type { Circuit, PartKind } from "../sim/electric/types";
 import type { ChipName } from "../sim/digital/chips";
 
@@ -7,6 +7,8 @@ export interface Card {
   title: string;
   body: string;
   figure?: "and" | "or" | "not";
+  /** 그림 대신 보여 줄 타임라인(신호 × 단계) */
+  timeline?: TimeRow[];
 }
 
 export type QuizItem =

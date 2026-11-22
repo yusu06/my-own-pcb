@@ -261,7 +261,7 @@ svg.circuit .fallback .chip-name { fill: var(--muted); }
 .test-results .pass { color: var(--ok); font-weight: 700; margin: 0; }
 .test-results .note { margin: 0; font-weight: 600; }
 .test-results .fail { color: var(--bad); font-weight: 700; margin: 0; }
-.check { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 0.92rem; }
+.check { min-width: 0; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 0.92rem; }
 .check.bad { border-color: var(--bad); }
 table.truth { border-collapse: collapse; margin-top: 8px; width: 100%; font-size: 0.9rem; }
 table.truth th, table.truth td { border: 1px solid var(--line); padding: 4px 8px; text-align: center; }
@@ -317,7 +317,7 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
 }
 
 /* 타임라인(순차 회로 결과): 신호 × 단계 */
-.timeline { overflow-x: auto; font-family: ui-monospace, monospace; font-size: 0.85rem; margin: 0.5rem 0; }
+.timeline { max-width: 100%; overflow-x: auto; font-family: ui-monospace, monospace; font-size: 0.85rem; margin: 0.5rem 0; }
 .tl-row { display: flex; white-space: nowrap; }
 .tl-name { flex: 0 0 6.5rem; position: sticky; left: 0; background: var(--card); padding: 2px 4px; overflow: hidden; text-overflow: ellipsis; }
 .tl-cell { flex: 0 0 2.4rem; text-align: center; padding: 2px 0; border-left: 1px solid var(--line); }
