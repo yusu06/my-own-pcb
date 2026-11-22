@@ -4,7 +4,7 @@ import { GLOSSARY } from "./glossary";
 import type { ElectricTask, Lesson, Task } from "./types";
 import type { Circuit } from "../sim/electric/types";
 import { gradeLogic } from "../grader/logic";
-import { makeLib } from "../sim/digital/chips";
+import { DEFAULT_CHIPS, makeLib } from "../sim/digital/chips";
 import { gradeElectric } from "../grader/electric";
 import { SWITCH_KINDS } from "../sim/electric/parts";
 
@@ -55,6 +55,12 @@ describe.each(LESSONS.flatMap((l) => l.tasks.map((t, i) => [`${l.id} 과제 ${i 
       expect(t.expect).toHaveLength(1 << t.inputs.length);
       for (const row of t.expect) expect(row).toHaveLength(t.outputs.length);
     });
+    if (t.saveAs) {
+      test("부품함에 저장하는 과제는 기본 부품과 같은 핀 이름을 쓴다", () => {
+        expect(t.inputs).toEqual(DEFAULT_CHIPS[t.saveAs!].inputs);
+        expect(t.outputs).toEqual(DEFAULT_CHIPS[t.saveAs!].outputs);
+      });
+    }
     if (t.maxCost !== undefined) {
       test("모범 답안은 원가 목표를 만족하고, 목표를 넘는 오답이 있다", () => {
         expect(gradeLogic(t.reference, t, lib).cost).toBeLessThanOrEqual(t.maxCost!);

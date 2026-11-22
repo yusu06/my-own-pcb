@@ -17,6 +17,13 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   "nc-switch": { term: "평상시 닫힘 스위치", short: "아무것도 안 할 때는 이어져 있고, 누르면 끊기는 스위치(NC)." },
   transistor: { term: "트랜지스터", short: "작은 전류로 큰 전류를 켜고 끄는 ‘전기로 누르는 스위치’ 부품." },
   "logic-gate": { term: "논리 게이트", short: "입력 신호(0/1)를 받아 정해진 규칙(AND, OR, NOT 등)대로 출력을 내는 회로." },
+  nand: { term: "NAND", short: "‘둘 다 1이면 0, 아니면 1’인 게이트. AND의 결과를 뒤집은 것. 이것 하나로 모든 게이트를 만들 수 있다." },
+  "truth-table": { term: "진리표", short: "입력의 모든 경우와 그때의 출력을 표로 정리한 것. 입력이 n개면 2ⁿ줄." },
+  "custom-part": { term: "부품함 부품", short: "내가 만든 회로를 이름 붙여 저장한 부품. 다음 회로에서 상자 하나로 꺼내 쓴다." },
+  xor: { term: "XOR", short: "‘두 입력이 서로 다르면 1’인 게이트. 배타적 OR라고도 한다." },
+  sop: { term: "곱의 합", short: "진리표에서 출력이 1인 줄마다 AND 식을 만들고, 그 식들을 OR로 묶어 회로를 세우는 방법." },
+  "boolean-algebra": { term: "불 대수", short: "0과 1, AND·OR·NOT으로 하는 계산 규칙. 식을 정리해서 부품 수를 줄일 때 쓴다." },
+  interlock: { term: "인터록", short: "위험한 동작이 조건을 모두 갖췄을 때만 일어나게 막아 두는 안전 장치." },
   led: {
     term: "LED",
     short: "전류가 흐르면 빛을 내는 부품(발광 다이오드). 한쪽 방향으로만 전류가 흐른다.",
