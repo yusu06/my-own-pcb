@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { ckt } from "../electric/ckt";
 import type { ChipRef, Circuit } from "../electric/types";
-import { DEFAULT_CHIPS, makeLib, validChipDef } from "./chips";
+import { CHIP_LABEL, DEFAULT_CHIPS, makeLib, validChipDef } from "./chips";
 import { nandCost, simulate, type ChipDef } from "./sim";
 
 const noLib = () => null;
@@ -52,4 +52,20 @@ test("validChipDef", () => {
   const noOut: Circuit = { parts: myAnd.circuit.parts.filter((p) => p.kind !== "out"), wires: [] };
   expect(validChipDef({ ...myAnd, circuit: noOut })).toBe(false);
   expect(validChipDef({ ...myAnd, inputs: [] })).toBe(false);
+});
+
+/** 여러 입력·출력 칩의 진리표(첫 입력이 최상위 비트), 출력은 이어 붙인 문자열 */
+function multiTable(def: ChipDef): string[] {
+  return Array.from({ length: 1 << def.inputs.length }, (_, n) => {
+    const ins = Object.fromEntries(def.inputs.map((name, i) => [name, ((n >> (def.inputs.length - 1 - i)) & 1) as 0 | 1]));
+    const out = simulate(def.circuit, ins, noLib).out;
+    return def.outputs.map((o) => out[o]).join("");
+  });
+}
+
+test("MUX 기본 부품: s가 0이면 a, 1이면 b (NAND 4개)", () => {
+  expect(DEFAULT_CHIPS.mux.inputs).toEqual(["a", "b", "s"]);
+  expect(multiTable(DEFAULT_CHIPS.mux)).toEqual(["0", "0", "0", "1", "1", "0", "1", "1"]);
+  expect(nandCost(DEFAULT_CHIPS.mux.circuit, noLib)).toBe(4);
+  expect(CHIP_LABEL.mux).toBe("MUX");
 });

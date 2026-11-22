@@ -36,4 +36,7 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   fpga: { term: "FPGA", short: "안의 연결을 나중에 다시 정할 수 있는 칩. Verilog로 쓴 회로를 실제로 돌려 볼 때 많이 쓴다." },
   "seven-segment": { term: "7세그먼트", short: "막대 7개(a~g)를 켜고 꺼서 숫자를 보여 주는 표시 장치. 엘리베이터, 전자시계에 쓰인다." },
   decoder: { term: "디코더", short: "입력 코드(예: 4비트 숫자)를 받아 그에 맞는 출력들을 켜 주는 회로." },
+  encoder: { term: "인코더", short: "여러 입력 중 켜진 것의 번호를 2진수 코드로 바꿔 주는 회로. 디코더의 반대." },
+  "priority-encoder": { term: "우선순위 인코더", short: "입력이 여러 개 동시에 켜지면 미리 정한 순서대로 가장 중요한 것의 번호만 내보내는 인코더." },
+  mux: { term: "MUX(멀티플렉서)", short: "선택 신호에 따라 여러 입력 중 하나만 골라 출력으로 보내는 회로." },
 };
