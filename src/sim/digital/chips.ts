@@ -95,7 +95,7 @@ export const CHIP_LABEL: Record<string, string> = {
 
 const isObj = (v: unknown): v is Record<string, any> => typeof v === "object" && v !== null && !Array.isArray(v);
 const strList = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === "string");
-const LOGIC_KINDS = ["nand", "in", "out", "chip"];
+const LOGIC_KINDS = ["nand", "in", "out", "chip", "dff"];
 
 /** 저장소에서 읽은(신뢰할 수 없는) 칩 정의 검사 */
 export function validChipDef(x: unknown): x is ChipDef {

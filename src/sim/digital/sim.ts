@@ -32,6 +32,8 @@ interface Flat {
   keys: string[];
   links: [string, string][];
   nands: { a: string; b: string; y: string }[];
+  /** 기본 D 플립플롭(핀 키) */
+  dffs: { d: string; clk: string; q: string }[];
   /** 맨 위 in 부품의 출력 핀 → 부품 id */
   sources: Map<string, string>;
   missing: string | null;
@@ -39,7 +41,7 @@ interface Flat {
 
 /** 칩을 NAND까지 펼친다. 칩 안 부품 id에는 `칩id/` 접두어가 붙는다. */
 function flatten(c: Circuit, lib: ChipLib): Flat {
-  const f: Flat = { keys: [], links: [], nands: [], sources: new Map(), missing: null };
+  const f: Flat = { keys: [], links: [], nands: [], dffs: [], sources: new Map(), missing: null };
   // stack = 지금 펼치는 중인 칩(이름@버전). 같은 칩이 다시 나오면 순환이므로 펼치지 않는다.
   const walk = (circ: Circuit, pre: string, depth: number, stack: string[]) => {
     for (const p of circ.parts) for (const pin of pinNames(p)) f.keys.push(`${pre}${p.id}.${pin}`);
@@ -47,6 +49,7 @@ function flatten(c: Circuit, lib: ChipLib): Flat {
     for (const p of circ.parts) {
       const k = (pin: string) => `${pre}${p.id}.${pin}`;
       if (p.kind === "nand") f.nands.push({ a: k("a"), b: k("b"), y: k("y") });
+      else if (p.kind === "dff") f.dffs.push({ d: k("d"), clk: k("clk"), q: k("q") });
       else if (p.kind === "in" && depth === 0) f.sources.set(k("y"), p.id);
       else if (p.kind === "chip" && p.chip) {
         const key = `${p.chip.name}@${p.chip.v}`;
@@ -85,36 +88,57 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
   const drive = (k: string) => drivers.set(find(k), (drivers.get(find(k)) ?? 0) + 1);
   for (const k of f.sources.keys()) drive(k);
   for (const n of f.nands) drive(n.y);
+  for (const d of f.dffs) drive(d.q);
   const bad = new Set([...drivers].filter(([, n]) => n > 1).map(([r]) => r));
 
   const val = new Map<string, Bit>();
   // 이전 값이 없으면 0에서 시작(전원을 켠 직후처럼). X로 시작하면 발진하는 루프가 X에 갇혀 안 보인다.
   // 구동원 없는 넷은 아래 setFixed가 매번 X로 되돌린다.
   for (const k of f.keys) val.set(find(k), prev?.[k] ?? val.get(find(k)) ?? 0);
+  // 플립플롭 상태: 저장된 q와 직전 clk(전원 직후 0)
+  const ffQ: Bit[] = f.dffs.map((d) => prev?.[d.q] ?? 0);
+  const ffClk: Bit[] = f.dffs.map((d) => prev?.[d.clk] ?? 0);
   const setFixed = (m: Map<string, Bit>) => {
     for (const [k, id] of f.sources) m.set(find(k), inputs[id] ?? "X");
+    // clk가 정해지지 않으면(연결 안 됨) q도 정해지지 않는다
+    f.dffs.forEach((d, i) => m.set(find(d.q), m.get(find(d.clk)) === "X" ? "X" : ffQ[i]));
     for (const r of bad) m.set(r, "X");
     for (const k of f.keys) if (!drivers.has(find(k))) m.set(find(k), "X");
   };
   setFixed(val);
 
   // NAND를 하나씩 차례로 계산해 바로 반영한다(동시에 바꾸면 래치가 대칭으로 깜빡이기만 한다)
+  // 플립플롭은 바퀴마다: NAND 안정 → 0→1 에지인 플립플롭이 d를 한꺼번에 먼저 읽고 q에 쓴다 → 다시 안정.
+  // d를 모두 먼저 읽으므로 플립플롭을 사슬로 이어도 놓은 순서와 상관없이 한 칸씩만 밀린다.
   let oscillating = true;
-  for (let step = 0; step < MAX_STEPS; step++) {
-    let changed = false;
-    for (const n of f.nands) {
-      const y = find(n.y);
-      const v = nand(val.get(find(n.a))!, val.get(find(n.b))!);
-      if (val.get(y) !== v) {
-        val.set(y, v);
-        changed = true;
+  let budget = MAX_STEPS;
+  const settle = (): boolean => {
+    while (budget-- > 0) {
+      let changed = false;
+      for (const n of f.nands) {
+        const y = find(n.y);
+        const v = nand(val.get(find(n.a))!, val.get(find(n.b))!);
+        if (val.get(y) !== v) {
+          val.set(y, v);
+          changed = true;
+        }
       }
+      setFixed(val);
+      if (!changed) return true;
     }
-    setFixed(val);
-    if (!changed) {
+    return false;
+  };
+  while (settle()) {
+    const clkNow = f.dffs.map((d) => val.get(find(d.clk))!);
+    const fired = f.dffs.flatMap((_, i) => (ffClk[i] === 0 && clkNow[i] === 1 ? [i] : []));
+    const ds = fired.map((i) => val.get(find(f.dffs[i].d))!);
+    clkNow.forEach((v, i) => (ffClk[i] = v));
+    if (!fired.length) {
       oscillating = false;
       break;
     }
+    fired.forEach((i, k) => (ffQ[i] = ds[k]));
+    setFixed(val);
   }
 
   const net = Object.fromEntries(f.keys.map((k) => [k, val.get(find(k))!]));
@@ -123,5 +147,7 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
 }
 
 export function nandCost(c: Circuit, lib: ChipLib): number {
-  return flatten(c, lib).nands.length;
+  const f = flatten(c, lib);
+  // 기본 D 플립플롭은 2-3에서 그린 것과 같은 NAND 9개로 센다
+  return f.nands.length + f.dffs.length * 9;
 }

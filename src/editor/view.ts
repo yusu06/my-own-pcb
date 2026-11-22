@@ -36,7 +36,7 @@ export function mountEditor(opts: {
   const itemOf = (id: string): PaletteItem | undefined =>
     task.palette.find((i) => i.id === id || (i.multi && new RegExp(`^${i.id}\\d+$`).test(id)));
   const labelOf = (p: Part) =>
-    p.kind === "nand" || p.kind === "chip"
+    p.kind === "nand" || p.kind === "chip" || p.kind === "dff"
       ? "" // 기호 안에 이름이 있다
       : (task.kind === "logic" ? task.labels?.[p.id] : undefined) ?? itemOf(p.id)?.label ?? (p.kind === "battery" ? "전지" : p.id.toUpperCase());
 

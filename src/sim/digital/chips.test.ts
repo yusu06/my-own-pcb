@@ -114,3 +114,8 @@ test("D 플립플롭: clk가 0→1일 때만 d를 잡는다", () => {
   expect(nandCost(DEFAULT_CHIPS.dff.circuit, noLib)).toBe(9);
   expect(CHIP_LABEL.dff).toBe("D 플립플롭");
 });
+
+test("기본 D 플립플롭이 든 칩 정의도 유효하다", () => {
+  const def = { inputs: ["d", "clk"], outputs: ["q"], circuit: ckt(["d:in", "clk:in", "f:dff", "q:out"], ["d.y~f.d", "clk.y~f.clk", "f.q~q.a"]) };
+  expect(validChipDef(def)).toBe(true);
+});

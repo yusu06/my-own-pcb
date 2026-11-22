@@ -85,3 +85,14 @@ test("논리 과제: 모르는 multi id와 스냅샷이 다른 칩은 버린다"
   const s = sanitizeCircuit(raw, lt, lib)!;
   expect(s.parts.map((p) => p.id).sort()).toEqual(["a", "and2", "nand1", "nand12", "y"]);
 });
+
+test("기본 D 플립플롭이 든 저장 회로는 그대로 남는다", () => {
+  const t = {
+    kind: "logic", title: "", goal: "", hint: "",
+    palette: [{ id: "dff", kind: "dff", label: "D 플립플롭(기본)", multi: true }],
+    preset: ckt(["s:in", "clk:in", "q:out"], []),
+    inputs: ["s", "clk"], outputs: ["q"], expect: [], reference: ckt([], []), wrong: [],
+  } satisfies LogicTask;
+  const c = ckt(["s:in", "clk:in", "q:out", "dff1:dff"], ["s.y~dff1.d", "clk.y~dff1.clk", "dff1.q~q.a"]);
+  expect(sanitizeCircuit(c, t, makeLib({}))).toEqual(c);
+});

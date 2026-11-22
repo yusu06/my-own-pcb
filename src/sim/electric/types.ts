@@ -1,7 +1,9 @@
 export type PartKind =
   | "battery" | "resistor" | "lamp" | "led" | "switch" | "button" | "button-nc" | "npn"
   // 논리 부품 (M3)
-  | "nand" | "in" | "out" | "chip";
+  | "nand" | "in" | "out" | "chip"
+  // 기본 D 플립플롭 (M5b)
+  | "dff";
 
 /** 부품함 부품 참조. v: null = 기본 부품. inputs/outputs는 놓을 때 복사한 스냅샷(핀 배치가 이것으로 정해진다). */
 export interface ChipRef {
