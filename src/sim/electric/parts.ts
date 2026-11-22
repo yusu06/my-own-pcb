@@ -9,7 +9,15 @@ export const PINS: Record<PartKind, string[]> = {
   button: ["a", "b"],
   "button-nc": ["a", "b"],
   npn: ["b", "c", "e"],
+  nand: ["a", "b", "y"],
+  in: ["y"],
+  out: ["a"],
+  chip: [], // 부품마다 다르다: pinNames 사용
 };
+
+export function pinNames(p: Part): string[] {
+  return p.kind === "chip" ? [...(p.chip?.inputs ?? []), ...(p.chip?.outputs ?? [])] : PINS[p.kind];
+}
 
 /** 단위: V, Ω, A, S. 값은 계획(M2) "부품 상수" 표에서 확정. */
 export const C = {

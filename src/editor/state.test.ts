@@ -1,6 +1,7 @@
 import { describe, expect, test } from "vitest";
 import { initEditor, reduce, type EditorState } from "./state";
-import { GRID, PIN_OFFSET, pinPos, segmentHitsPart, snap, wirePath, wireRoute } from "./geometry";
+import { GRID, PIN_OFFSET, chipSize, pinOffset, pinPos, segmentHitsPart, snap, wirePath, wireRoute } from "./geometry";
+import { pinNames } from "../sim/electric/parts";
 import { ckt } from "../sim/electric/ckt";
 import type { PaletteItem } from "../lessons/types";
 
@@ -140,4 +141,22 @@ test("wireRoute는 어떤 배치에서도 가로·세로 선분만 만든다", (
         expect(pts[i][0] === pts[i - 1][0] || pts[i][1] === pts[i - 1][1], JSON.stringify({ ka, kb, dx, dy, rot, pinA, pinB, pts })).toBe(true);
     }
   }
+});
+
+describe("논리 부품 핀", () => {
+  const chip = { id: "c", kind: "chip" as const, x: 10, y: 10, rot: 0 as const, chip: { name: "and", v: null, inputs: ["a", "b"], outputs: ["y"] } };
+  test("pinNames", () => {
+    expect(pinNames({ id: "n", kind: "nand", x: 0, y: 0, rot: 0 })).toEqual(["a", "b", "y"]);
+    expect(pinNames({ id: "i", kind: "in", x: 0, y: 0, rot: 0 })).toEqual(["y"]);
+    expect(pinNames({ id: "o", kind: "out", x: 0, y: 0, rot: 0 })).toEqual(["a"]);
+    expect(pinNames(chip)).toEqual(["a", "b", "y"]);
+  });
+  test("chip 핀은 입력 왼쪽, 출력 오른쪽, 가운데 정렬", () => {
+    expect(pinOffset(chip, "a")).toEqual([-2, -1]);
+    expect(pinOffset(chip, "b")).toEqual([-2, 1]);
+    expect(pinOffset(chip, "y")).toEqual([2, 0]);
+    expect(pinOffset(chip, "zz")).toBeNull();
+    expect(pinPos({ ...chip, rot: 90 }, "a")).toEqual([(10 + 1) * GRID, (10 - 2) * GRID]);
+    expect(chipSize(chip)).toEqual({ w: 4, h: 4 });
+  });
 });

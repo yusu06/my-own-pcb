@@ -1,6 +1,6 @@
 import { gradeElectric, type CheckResult } from "../grader/electric";
 import type { ElectricTask } from "../lessons/types";
-import { SWITCH_KINDS } from "../sim/electric/parts";
+import { SWITCH_KINDS, pinNames } from "../sim/electric/parts";
 import { solve } from "../sim/electric/solve";
 import type { Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
 import { h } from "../ui/dom";
@@ -74,7 +74,7 @@ export function mountEditor(opts: {
   function pinAt(p: Pt): PinRef | null {
     let best: { ref: PinRef; d: number } | null = null;
     for (const part of st.circuit.parts) {
-      for (const pin of Object.keys(PIN_OFFSET[part.kind])) {
+      for (const pin of pinNames(part)) {
         const s = toScreen(pinPos(part, pin));
         const d = Math.hypot(s.x - p.x, s.y - p.y);
         if (d <= PIN_HIT_PX && (!best || d < best.d)) best = { ref: { part: part.id, pin }, d };

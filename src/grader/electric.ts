@@ -1,5 +1,5 @@
 import { buildNets, pinKey } from "../sim/electric/netlist";
-import { PINS, SWITCH_KINDS } from "../sim/electric/parts";
+import { pinNames, SWITCH_KINDS } from "../sim/electric/parts";
 import { solve, type Solution } from "../sim/electric/solve";
 import type { Circuit, PartKind, Pressed } from "../sim/electric/types";
 
@@ -41,8 +41,8 @@ function connected(c: Circuit, id: string): boolean {
   if (!p) return false;
   const { netOf } = buildNets(c);
   const others = new Set<number>();
-  for (const q of c.parts) if (q.id !== id) for (const pin of PINS[q.kind]) others.add(netOf.get(pinKey({ part: q.id, pin }))!);
-  return PINS[p.kind].every((pin) => others.has(netOf.get(pinKey({ part: id, pin }))!));
+  for (const q of c.parts) if (q.id !== id) for (const pin of pinNames(q)) others.add(netOf.get(pinKey({ part: q.id, pin }))!);
+  return pinNames(p).every((pin) => others.has(netOf.get(pinKey({ part: id, pin }))!));
 }
 
 export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: string[]): CheckResult[] {

@@ -1,6 +1,6 @@
 import type { PartResult } from "../sim/electric/solve";
 import type { Part } from "../sim/electric/types";
-import { GRID, PIN_OFFSET } from "./geometry";
+import { GRID, pinOffsets } from "./geometry";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -58,6 +58,8 @@ function body(p: Part, r: PartResult | undefined, pressed: boolean): SVGElement[
         line(-40, 0, -6, 0), line(-6, -14, -6, 14, "thick"),
         path("M -6 -6 L 20 -24 L 20 -40"), path("M -6 6 L 20 24 L 20 40"), path("M 12 15 L 20 24 L 9 23", "arrow"),
       ];
+    default:
+      return []; // 논리 부품 기호는 Task 6
   }
 }
 
@@ -65,7 +67,7 @@ export function partSymbol(p: Part, r: PartResult | undefined, pressed: boolean)
   const g = svg("g", { class: `part k-${p.kind}${r?.on ? " on" : ""}${r?.burnt ? " is-burnt" : ""}`, "data-id": p.id });
   const inner = svg("g", { transform: `rotate(${p.rot})` });
   for (const e of body(p, r, pressed)) inner.append(e);
-  for (const [, [dx, dy]] of Object.entries(PIN_OFFSET[p.kind])) inner.append(svg("circle", { cx: dx * GRID, cy: dy * GRID, r: 5, class: "pin" }));
+  for (const [, [dx, dy]] of Object.entries(pinOffsets(p))) inner.append(svg("circle", { cx: dx * GRID, cy: dy * GRID, r: 5, class: "pin" }));
   g.append(inner);
   g.setAttribute("transform", `translate(${p.x * GRID} ${p.y * GRID})`);
   return g;

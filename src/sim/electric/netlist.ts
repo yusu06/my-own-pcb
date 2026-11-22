@@ -1,4 +1,4 @@
-import { PINS } from "./parts";
+import { pinNames } from "./parts";
 import type { Circuit, PinRef } from "./types";
 
 export const pinKey = (r: PinRef) => `${r.part}.${r.pin}`;
@@ -12,7 +12,7 @@ export function buildNets(c: Circuit): { netOf: Map<string, number>; count: numb
     parent.set(k, r);
     return r;
   };
-  for (const p of c.parts) for (const pin of PINS[p.kind] ?? []) parent.set(`${p.id}.${pin}`, `${p.id}.${pin}`);
+  for (const p of c.parts) for (const pin of pinNames(p)) parent.set(`${p.id}.${pin}`, `${p.id}.${pin}`);
   for (const w of c.wires) {
     const a = pinKey(w.a);
     const b = pinKey(w.b);

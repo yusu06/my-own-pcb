@@ -13,7 +13,32 @@ export const PIN_OFFSET: Record<PartKind, Record<string, [number, number]>> = {
   button: { a: [-2, 0], b: [2, 0] },
   "button-nc": { a: [-2, 0], b: [2, 0] },
   npn: { b: [-2, 0], c: [1, -2], e: [1, 2] },
+  nand: { a: [-2, -1], b: [-2, 1], y: [2, 0] },
+  in: { y: [2, 0] },
+  out: { a: [-2, 0] },
+  chip: {}, // chipPins로 계산
 };
+
+/** 칩: 입력은 왼쪽(x=-2), 출력은 오른쪽(x=2), 세로 2칸 간격으로 가운데 정렬 */
+function chipPins(p: Part): Record<string, [number, number]> {
+  const col = (names: string[], x: number) =>
+    Object.fromEntries(names.map((n, i) => [n, [x, i * 2 - (names.length - 1)] as [number, number]]));
+  return { ...col(p.chip?.inputs ?? [], -2), ...col(p.chip?.outputs ?? [], 2) };
+}
+
+export function pinOffsets(p: Part): Record<string, [number, number]> {
+  return p.kind === "chip" ? chipPins(p) : PIN_OFFSET[p.kind];
+}
+
+export function pinOffset(p: Part, pin: string): [number, number] | null {
+  return pinOffsets(p)[pin] ?? null;
+}
+
+/** 칩 몸체 크기(격자 칸) */
+export function chipSize(p: Part): { w: number; h: number } {
+  const n = Math.max(p.chip?.inputs.length ?? 0, p.chip?.outputs.length ?? 0, 1);
+  return { w: 4, h: n * 2 };
+}
 
 /** 시계 방향 회전(SVG y축 아래) */
 function rotate([x, y]: [number, number], rot: Part["rot"]): [number, number] {
@@ -30,7 +55,7 @@ function rotate([x, y]: [number, number], rot: Part["rot"]): [number, number] {
 }
 
 export function pinPos(p: Part, pin: string): [number, number] {
-  const [dx, dy] = rotate(PIN_OFFSET[p.kind][pin], p.rot);
+  const [dx, dy] = rotate(pinOffset(p, pin) ?? [0, 0], p.rot);
   return [(p.x + dx) * GRID, (p.y + dy) * GRID];
 }
 
@@ -46,7 +71,12 @@ type XY = [number, number];
 
 /** 부품 몸체 상자(핀은 상자 밖). 세계 좌표 [x1, y1, x2, y2] */
 export function partBox(p: Part): [number, number, number, number] {
-  const local: [number, number, number, number] = p.kind === "npn" ? [-1.2, -1.3, 1.6, 1.3] : [-1.4, -0.9, 1.4, 0.9];
+  const h = p.kind === "chip" ? chipSize(p).h / 2 : 0;
+  const local: [number, number, number, number] =
+    p.kind === "npn" ? [-1.2, -1.3, 1.6, 1.3]
+    : p.kind === "nand" ? [-1.4, -1.4, 1.4, 1.4]
+    : p.kind === "chip" ? [-1.5, -h, 1.5, h]
+    : [-1.4, -0.9, 1.4, 0.9];
   const [a, b] = [rotate([local[0], local[1]], p.rot), rotate([local[2], local[3]], p.rot)];
   const xs = [a[0], b[0]].map((v) => (p.x + v) * GRID);
   const ys = [a[1], b[1]].map((v) => (p.y + v) * GRID);
@@ -63,7 +93,7 @@ export function segmentHitsPart(a: XY, b: XY, p: Part): boolean {
 
 /** 핀이 부품 밖을 향하는 방향(가로 또는 세로 단위 벡터) */
 export function outward(p: Part, pin: string): XY {
-  const [dx, dy] = rotate(PIN_OFFSET[p.kind][pin], p.rot);
+  const [dx, dy] = rotate(pinOffset(p, pin) ?? [0, 0], p.rot);
   return Math.abs(dx) >= Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
 }
 

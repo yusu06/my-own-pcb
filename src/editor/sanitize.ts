@@ -1,5 +1,5 @@
 import type { ElectricTask } from "../lessons/types";
-import { PINS } from "../sim/electric/parts";
+import { pinNames } from "../sim/electric/parts";
 import type { Circuit, Part, PinRef } from "../sim/electric/types";
 
 const isObj = (v: unknown): v is Record<string, any> => typeof v === "object" && v !== null && !Array.isArray(v);
@@ -34,7 +34,7 @@ export function sanitizeCircuit(raw: unknown, task: ElectricTask): Circuit | nul
   const validPin = (r: unknown): r is PinRef => {
     if (!isObj(r)) return false;
     const part = parts.find((q) => q.id === r.part);
-    return !!part && PINS[part.kind].includes(r.pin);
+    return !!part && pinNames(part).includes(r.pin);
   };
   const wires = raw.wires
     .filter((w: unknown) => isObj(w) && validPin(w.a) && validPin(w.b))
