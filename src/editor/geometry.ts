@@ -62,7 +62,7 @@ export function segmentHitsPart(a: XY, b: XY, p: Part): boolean {
 }
 
 /** 핀이 부품 밖을 향하는 방향(가로 또는 세로 단위 벡터) */
-function outward(p: Part, pin: string): XY {
+export function outward(p: Part, pin: string): XY {
   const [dx, dy] = rotate(PIN_OFFSET[p.kind][pin], p.rot);
   return Math.abs(dx) >= Math.abs(dy) ? [Math.sign(dx), 0] : [0, Math.sign(dy)];
 }
@@ -97,13 +97,16 @@ export function wireRoute(pa: Part, pinA: string, pb: Part, pinB: string, parts:
     const s = score(pts);
     if (s < bestScore) [best, bestScore] = [pts, s];
   }
-  // 길이 0인 선분과 한 직선 위 중간점 정리
-  return best.filter((p, i, arr) => {
-    if (i === 0 || i === arr.length - 1) return true;
-    const [prev, next] = [arr[i - 1], arr[i + 1]];
-    if (p[0] === prev[0] && p[1] === prev[1]) return false;
-    return !((prev[0] === p[0] && p[0] === next[0]) || (prev[1] === p[1] && p[1] === next[1]));
-  });
+  // 길이 0인 선분과 한 직선 위 중간점 정리: 이미 남긴 점을 기준으로 차례로 (원래 이웃 기준이면 둘 다 지워져 대각선이 생긴다)
+  const out: XY[] = [];
+  for (const p of best) {
+    const prev = out[out.length - 1];
+    if (prev && p[0] === prev[0] && p[1] === prev[1]) continue;
+    const pp = out[out.length - 2];
+    if (pp && ((pp[0] === prev[0] && prev[0] === p[0]) || (pp[1] === prev[1] && prev[1] === p[1]))) out.pop();
+    out.push(p);
+  }
+  return out;
 }
 
 export const pointsPath = (pts: XY[]) => pts.map((p, i) => `${i ? "L" : "M"} ${p[0]} ${p[1]}`).join(" ");

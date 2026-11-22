@@ -14,7 +14,7 @@ export const lesson: Lesson = {
   client: {
     from: "캠핑용품점 ‘별빛캠프’",
     request: "전구 손전등은 전지가 금방 닳는다는 불만이 많아요. [[led]]로 바꿔서 오래 쓰게 해 주세요.",
-    requirements: ["버튼을 누르면 [[led]]가 켜질 것", "[[led]]가 타지 않고 알맞은 밝기(5~20mA)일 것"],
+    requirements: ["버튼을 누르면 [[led]]가 켜질 것", "[[led]]가 타지 않고 알맞은 밝기(4~20mA)일 것"],
   },
   concepts: [
     {
@@ -40,7 +40,7 @@ export const lesson: Lesson = {
     {
       kind: "electric",
       title: "LED 손전등 만들기",
-      goal: "버튼·[[resistor]]·[[led]]를 [[series]]로 이으세요. 저항을 길게 누르면 값을 바꿀 수 있어요. [[led]]는 삼각형 쪽(+)이 전지 + 쪽을 향해야 해요.",
+      goal: "버튼·[[resistor]]·[[led]]를 [[series]]로 이으세요. 저항을 길게 누르면 값을 바꿀 수 있어요. [[led]]는 + 표시가 있는 핀이 전지 + 쪽을 향해야 해요.",
       palette: [
         { id: "btn", kind: "button", label: "버튼" },
         { id: "r", kind: "resistor", label: "저항", values: [10, 47, 100, 220] },
@@ -49,17 +49,16 @@ export const lesson: Lesson = {
       preset: ckt(["bat:battery:3"], []),
       checks: [
         { kind: "truth", inputs: ["btn"], output: "led", expect: [0, 1] },
-        { kind: "current", part: "led", min: 0.005, max: 0.02, when: { btn: true } },
+        { kind: "current", part: "led", min: 0.004, max: 0.02, when: { btn: true } },
         { kind: "noBurn" },
         { kind: "noShort" },
       ],
       reference: ckt(P, W),
       wrong: [
         withR(10),
-        withR(220),
         ckt(P, ["bat.+~btn.a", "btn.b~r.a", "r.b~led.k", "led.a~bat.-"]),
       ],
-      hint: "순서는 전지 + → 버튼 → 저항 → LED 왼쪽(a) → LED 오른쪽(k) → 전지 −. 저항은 47Ω이나 100Ω이 알맞아요.",
+      hint: "순서는 전지 + → 버튼 → 저항 → LED + → LED − → 전지 −. 저항은 47Ω~220Ω이 알맞아요. 작을수록 밝지만 너무 작으면 타요.",
     },
   ],
   realWorld: [

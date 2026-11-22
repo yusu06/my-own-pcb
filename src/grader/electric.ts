@@ -23,8 +23,10 @@ export interface CheckResult {
   rows?: TruthRow[];
 }
 
-const NAME: Partial<Record<PartKind, string>> = { lamp: "전구", led: "LED", resistor: "저항", npn: "트랜지스터" };
+const NAME: Partial<Record<PartKind, string>> = { lamp: "전구", led: "LED", resistor: "저항", npn: "트랜지스터", button: "버튼", "button-nc": "버튼", switch: "스위치" };
 const UNSTABLE = "회로 계산이 불안정해요. 연결을 조금 바꿔 보세요.";
+// 스위치 모델 트랜지스터는 이미터 쪽에 부하를 달면 켜짐·꺼짐을 오간다
+const UNSTABLE_NPN = "트랜지스터가 켜졌다 꺼졌다 해요. 이미터(E)는 전지 −에 바로 잇고, LED 같은 부하는 컬렉터(C) 쪽에 달아 주세요.";
 const mA = (a: number) => `${(a * 1000).toFixed(1)}mA`;
 
 function combos(inputs: string[]): Pressed[] {
@@ -50,6 +52,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
     if (!cache.has(key)) cache.set(key, solve(c, pressed));
     return cache.get(key)!;
   };
+  const unstable = c.parts.some((p) => p.kind === "npn") ? UNSTABLE_NPN : UNSTABLE;
   const kindName = (id: string) => NAME[c.parts.find((p) => p.id === id)?.kind as PartKind] ?? "부품";
 
   return checks.map((chk): CheckResult => {
@@ -59,7 +62,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         if (!c.parts.some((p) => p.id === chk.output)) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
         if (!connected(c, chk.output)) return { ok: false, message: `${name}가 회로에 연결되지 않았어요. 양쪽 핀을 모두 이어 주세요.` };
         const sols = combos(chk.inputs).map(run);
-        if (sols.some((s) => !s.converged)) return { ok: false, message: UNSTABLE };
+        if (sols.some((s) => !s.converged)) return { ok: false, message: unstable };
         const rows: TruthRow[] = sols.map((s, n) => ({
           inputs: chk.inputs.map((_, i) => ((n >> (chk.inputs.length - 1 - i)) & 1) as 0 | 1),
           expect: chk.expect[n],
@@ -76,7 +79,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
       }
       case "current": {
         const s = run(chk.when);
-        if (!s.converged) return { ok: false, message: UNSTABLE };
+        if (!s.converged) return { ok: false, message: unstable };
         const r = s.parts[chk.part];
         const name = kindName(chk.part);
         if (!r) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
@@ -90,7 +93,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
       }
       case "noBurn": {
         const sols = combos(inputs).map(run);
-        if (sols.some((s) => !s.converged)) return { ok: false, message: UNSTABLE };
+        if (sols.some((s) => !s.converged)) return { ok: false, message: unstable };
         return sols.some((s) => Object.values(s.parts).some((p) => p.burnt))
           ? { ok: false, message: "LED가 탔어요. 저항으로 전류를 줄여 주세요." }
           : { ok: true, message: "타는 부품이 없어요." };

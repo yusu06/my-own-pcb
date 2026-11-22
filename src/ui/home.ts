@@ -1,5 +1,5 @@
 import { CHAPTERS, LESSONS, findLesson } from "../lessons";
-import { lessonState, nextLessonId, openLesson, type LessonState } from "../progress";
+import { lessonState, nextLessonId, type LessonState } from "../progress";
 import type { Ctx } from "./app";
 import { h } from "./dom";
 

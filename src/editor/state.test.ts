@@ -1,6 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { initEditor, reduce, type EditorState } from "./state";
-import { GRID, pinPos, segmentHitsPart, snap, wirePath, wireRoute } from "./geometry";
+import { GRID, PIN_OFFSET, pinPos, segmentHitsPart, snap, wirePath, wireRoute } from "./geometry";
 import { ckt } from "../sim/electric/ckt";
 import type { PaletteItem } from "../lessons/types";
 
@@ -126,4 +126,18 @@ describe("좌표", () => {
     expect(snap(31)).toBe(2);
     expect(wirePath([0, 0], [40, 60])).toBe("M 0 0 H 40 V 60");
   });
+});
+
+test("wireRoute는 어떤 배치에서도 가로·세로 선분만 만든다", () => {
+  const kinds = ["battery", "resistor", "npn"] as const;
+  for (const ka of kinds) for (const kb of kinds) for (let dx = -6; dx <= 6; dx += 3) for (let dy = -6; dy <= 6; dy += 3) for (const rot of [0, 90] as const) {
+    const pa = { id: "a", kind: ka, x: 10, y: 10, rot: 0 as const };
+    const pb = { id: "b", kind: kb, x: 10 + dx, y: 10 + dy, rot };
+    if (dx === 0 && dy === 0) continue;
+    for (const pinA of Object.keys(PIN_OFFSET[ka])) for (const pinB of Object.keys(PIN_OFFSET[kb])) {
+      const pts = wireRoute(pa, pinA, pb, pinB, [pa, pb]);
+      for (let i = 1; i < pts.length; i++)
+        expect(pts[i][0] === pts[i - 1][0] || pts[i][1] === pts[i - 1][1], JSON.stringify({ ka, kb, dx, dy, rot, pinA, pinB, pts })).toBe(true);
+    }
+  }
 });

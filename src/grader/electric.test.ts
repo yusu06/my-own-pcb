@@ -57,3 +57,13 @@ test("전지가 없는 회로도 친절하게 실패", () => {
   expect(r[0].ok).toBe(false);
   expect(typeof r[0].message).toBe("string");
 });
+
+test("트랜지스터 회로가 수렴하지 않으면 이미터 연결을 알려 준다", () => {
+  const c = ckt(
+    ["bat:battery:3", "btn:button", "rb:resistor:10000", "q:npn", "r:resistor:100", "led:led"],
+    ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", "bat.+~r.a", "r.b~q.c", "q.e~led.a", "led.k~bat.-"],
+  );
+  const [r] = gradeElectric(c, [{ kind: "truth", inputs: ["btn"], output: "led", expect: [0, 1] }], ["btn"]);
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("이미터");
+});

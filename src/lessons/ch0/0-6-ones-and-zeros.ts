@@ -51,6 +51,7 @@ export const lesson: Lesson = {
         { kind: "truth", inputs: ["a", "b"], output: "led", expect: [0, 0, 0, 1] },
         { kind: "current", part: "led", min: 0.005, max: 0.02, when: { a: true, b: true } },
         { kind: "noBurn" },
+        { kind: "noShort" },
       ],
       reference: ckt(P, ["bat.+~a.a", "a.b~b.a", "b.b~r.a", "r.b~led.a", "led.k~bat.-"]),
       wrong: [ckt(P, ["bat.+~a.a", "bat.+~b.a", "a.b~r.a", "b.b~r.a", "r.b~led.a", "led.k~bat.-"])],

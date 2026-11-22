@@ -207,6 +207,8 @@ svg.circuit .wire.flow { stroke: var(--accent); stroke-dasharray: 8 6; animation
 @media (prefers-reduced-motion: reduce) { svg.circuit .wire.flow { animation: none; } }
 svg.circuit text { fill: var(--fg); stroke: none; font-size: 12px; font-family: inherit; }
 svg.circuit .part-label { fill: var(--muted); font-size: 11px; }
+svg.circuit .pin-name { fill: var(--accent); font-size: 10px; font-weight: 700; pointer-events: none; }
+svg.circuit .wire.selected { stroke: var(--danger, #e5484d); stroke-width: 5; }
 svg.circuit .pol { font-size: 13px; font-weight: 700; }
 svg.circuit .lamp-glass { fill: rgb(255 200 40 / calc(var(--glow, 0) * 0.95)); }
 svg.circuit .led-body { fill: rgb(255 60 60 / calc(var(--glow, 0) * 0.95)); }

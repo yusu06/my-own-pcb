@@ -55,7 +55,7 @@ export const lesson: Lesson = {
         ckt(P, ["bat.+~btn.a", "btn.b~q.b", ...LOAD]),
         ckt(P, ["bat.+~btn.a", "btn.b~rb.a", "rb.b~q.b", "bat.+~r.a", "r.b~led.a", "led.k~q.e", "q.c~bat.-"]),
       ],
-      hint: "트랜지스터의 왼쪽 핀이 B(베이스), 오른쪽 위가 C(컬렉터), 오른쪽 아래가 E(이미터)예요.",
+      hint: "트랜지스터 핀 옆의 글자를 보세요: B(베이스), C(컬렉터), E(이미터). LED는 + 쪽이 저항, − 쪽이 C예요.",
     },
   ],
   realWorld: [

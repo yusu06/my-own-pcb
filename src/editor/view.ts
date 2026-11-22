@@ -4,7 +4,7 @@ import { SWITCH_KINDS } from "../sim/electric/parts";
 import { solve } from "../sim/electric/solve";
 import type { Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
 import { h } from "../ui/dom";
-import { GRID, PIN_OFFSET, pinPos, pointsPath, snap, wireRoute } from "./geometry";
+import { GRID, PIN_OFFSET, outward, pinPos, pointsPath, snap, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
 import { initEditor, reduce, type Action, type EditorState } from "./state";
 import { partSymbol, svg } from "./symbols";
@@ -19,6 +19,10 @@ export interface EditorHandle {
 
 const PIN_HIT_PX = 22;
 const WIRE_HIT_PX = 10;
+const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
+  led: { a: "+", k: "−" },
+  npn: { b: "B", c: "C", e: "E" },
+};
 const mA = (a: number) => `${(a * 1000).toFixed(1)} mA`;
 
 export function mountEditor(opts: {
@@ -33,6 +37,7 @@ export function mountEditor(opts: {
     task.palette.find((p) => p.id === id)?.label ?? (task.preset.parts.find((p) => p.id === id)?.kind === "battery" ? "전지" : id);
 
   let st: EditorState = initEditor(task.preset, opts.saved);
+  let selWire = -1; // 한 번 탭해서 선택한 선 (한 번 더 탭하면 삭제)
   let mode: "edit" | "run" = "edit";
   let pressed: Pressed = {};
   let view = { s: 1, tx: 0, ty: 0 };
@@ -104,6 +109,7 @@ export function mountEditor(opts: {
   // ---------- 상태 변경 ----------
   function apply(a: Action) {
     const before = st.circuit;
+    selWire = -1; // 선 번호는 편집하면 바뀐다
     st = reduce(st, a);
     if (st.circuit !== before) opts.onChange(st.circuit);
     render();
@@ -180,12 +186,12 @@ export function mountEditor(opts: {
     const sol = solve(c, pressed);
     world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.s})`);
     world.replaceChildren();
-    for (const wr of c.wires) {
+    c.wires.forEach((wr, i) => {
       const pts = route(c, wr);
-      if (!pts) continue;
+      if (!pts) return;
       const flowing = (sol.parts[wr.a.part]?.current ?? 0) >= 0.001 && (sol.parts[wr.b.part]?.current ?? 0) >= 0.001;
-      world.append(svg("path", { d: pointsPath(pts), class: "wire" + (flowing ? " flow" : "") }));
-    }
+      world.append(svg("path", { d: pointsPath(pts), class: "wire" + (flowing ? " flow" : "") + (i === selWire ? " selected" : "") }));
+    });
     for (const p of c.parts) {
       const g = partSymbol(p, sol.parts[p.id], !!pressed[p.id]);
       const label = svg("text", { x: 0, y: p.kind === "npn" ? 0 : 34, class: "part-label", "text-anchor": "middle" });
@@ -193,6 +199,14 @@ export function mountEditor(opts: {
       if (p.kind === "npn") label.setAttribute("transform", "translate(0 52)");
       g.append(label);
       world.append(g);
+      // 방향이 중요한 핀 이름: 회전해도 글자가 똑바로 보이게 부품 그룹 밖(월드)에 쓴다
+      for (const [pin, text] of Object.entries(PIN_NAMES[p.kind] ?? {})) {
+        const [x, y] = pinPos(p, pin);
+        const vertical = outward(p, pin)[0] === 0; // 선이 세로로 나가면 글자는 옆에
+        const t = svg("text", { x: vertical ? x + 11 : x, y: vertical ? y + 4 : y - 9, class: "pin-name", "text-anchor": "middle" });
+        t.textContent = text;
+        world.append(t);
+      }
     }
     if (st.pending) {
       const part = c.parts.find((q) => q.id === st.pending!.part);
@@ -219,6 +233,8 @@ export function mountEditor(opts: {
             ? "스위치·버튼을 눌러 보세요. 핀을 탭하면 전압, 부품을 탭하면 전류가 보여요."
             : st.pending
               ? "연결할 다른 핀을 탭하세요. (같은 핀을 다시 누르면 취소)"
+              : selWire >= 0
+                ? "선택한 선을 한 번 더 탭하면 지워요. 빈 곳을 탭하면 취소."
               : "핀을 탭해 선을 이어요. 부품은 끌어서 옮기고, 길게 누르면 회전·삭제.";
 
     const left = task.palette.filter((i) => !st.circuit.parts.some((p) => p.id === i.id));
@@ -280,9 +296,15 @@ export function mountEditor(opts: {
       }
       if (pin) return apply({ t: "tapPin", pin });
       const wi = wireAt(p);
-      if (wi >= 0) return apply({ t: "removeWire", index: wi });
-      if (st.pending) {
+      // 실수로 지우지 않게: 첫 탭은 선택, 선택된 선을 한 번 더 탭하면 삭제
+      if (wi >= 0 && wi === selWire) return apply({ t: "removeWire", index: wi });
+      if (wi >= 0 && !st.pending) {
+        selWire = wi;
+        return render();
+      }
+      if (st.pending || selWire >= 0) {
         st = { ...st, pending: null };
+        selWire = -1;
         render();
       }
     },
@@ -292,7 +314,8 @@ export function mountEditor(opts: {
       if (part) openMenu(part, p);
     },
     dragStart(p) {
-      if (mode !== "edit" || pinAt(p)) return false;
+      // 핀 위에서 시작해도 부품을 옮긴다 (축소하면 핀 범위가 부품 몸체를 다 덮는다)
+      if (mode !== "edit") return false;
       const part = partAt(p);
       if (!part) return false;
       const w = toWorld(p);
