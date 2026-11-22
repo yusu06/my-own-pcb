@@ -57,4 +57,7 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   counter: { term: "카운터", short: "클럭 에지마다 값을 하나씩 늘리거나 줄이는 레지스터. 시간·횟수를 센다." },
   divider: { term: "분주기", short: "빠른 클럭을 세어서 더 느린 박자를 만드는 회로. 예: 1000번 셀 때마다 한 번 → 1/1000 주파수." },
   "shift-register": { term: "시프트 레지스터", short: "클럭 에지마다 저장된 비트를 한 칸씩 옆으로 밀어 옮기는 레지스터. 줄지어 선 플립플롭." },
+  fsm: { term: "FSM(유한 상태 기계)", short: "정해진 몇 개의 상태 중 하나를 기억하고, 입력과 조건에 따라 다음 상태로 옮겨 가는 회로." },
+  state: { term: "상태", short: "FSM이 지금 어느 단계에 있는지. 레지스터에 숫자로 저장한다." },
+  "state-diagram": { term: "상태도", short: "상태를 동그라미, 넘어가는 조건을 화살표로 그린 그림. FSM 설계도." },
 };

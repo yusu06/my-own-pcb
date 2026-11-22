@@ -63,7 +63,7 @@ export function stateFigure(sd: StateDiagram): SVGSVGElement {
   marker.append(svg("path", { d: "M 0 0 L 10 5 L 0 10 z", class: "sd-head" }));
   defs.append(marker);
   root.append(defs);
-  const pos = new Map(sd.nodes.map((n) => [n.id, { x: 30 + (n.x / 100) * (W - 60), y: 40 + (n.y / 100) * (H - 70) }]));
+  const pos = new Map(sd.nodes.map((n) => [n.id, { x: 30 + (n.x / 100) * (W - 60), y: 70 + (n.y / 100) * (H - 100) /* 위쪽은 자기 자신 고리와 이름표 자리 */ }]));
   const label = (x: number, y: number, s: string, cls: string) =>
     Object.assign(svg("text", { x: x.toFixed(1), y: y.toFixed(1), "text-anchor": "middle", class: cls }), { textContent: s });
   for (const e of sd.edges) {
