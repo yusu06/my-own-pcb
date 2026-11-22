@@ -58,3 +58,10 @@ test("빈 뼈대는 실패", () => {
   expect(g.passed).toBe(false);
   expect(g.error?.message).toContain("값을 넣는 곳이 없어요");
 });
+
+test("아주 깊게 겹친 식도 크래시 없이 오류로", () => {
+  const deep = "(".repeat(5000) + "a & b" + ")".repeat(5000);
+  const g = gradeVerilog(code(`  assign y = ${deep};`), task);
+  expect(g.passed).toBe(false);
+  expect(g.error?.message).toContain("너무 깊게");
+});

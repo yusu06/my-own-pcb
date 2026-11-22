@@ -56,6 +56,8 @@ export function gradeVerilog(src: string, task: VerilogTask): VerilogGrade {
     return { error: null, rows, total: all.length, passed: all.every((r) => r.ok) };
   } catch (e) {
     if (e instanceof VerilogError) return bad(e);
+    // 괄호·begin을 수천 겹 쌓으면 해석기 재귀가 스택을 넘는다 — 버튼이 먹통이 되지 않게 오류로 보여 준다
+    if (e instanceof RangeError) return bad(new VerilogError(1, "식이나 begin을 너무 깊게 겹쳐 썼어요. 중간 결과를 wire로 나눠 써 주세요."));
     throw e;
   }
 }
