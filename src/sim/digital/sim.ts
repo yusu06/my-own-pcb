@@ -87,7 +87,7 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
   for (const n of f.nands) drive(n.y);
   const bad = new Set([...drivers].filter(([, n]) => n > 1).map(([r]) => r));
 
-  let val = new Map<string, Bit>();
+  const val = new Map<string, Bit>();
   // 이전 값이 없으면 0에서 시작(전원을 켠 직후처럼). X로 시작하면 발진하는 루프가 X에 갇혀 안 보인다.
   // 구동원 없는 넷은 아래 setFixed가 매번 X로 되돌린다.
   for (const k of f.keys) val.set(find(k), prev?.[k] ?? val.get(find(k)) ?? 0);
@@ -98,13 +98,19 @@ export function simulate(c: Circuit, inputs: Record<string, 0 | 1>, lib: ChipLib
   };
   setFixed(val);
 
+  // NAND를 하나씩 차례로 계산해 바로 반영한다(동시에 바꾸면 래치가 대칭으로 깜빡이기만 한다)
   let oscillating = true;
   for (let step = 0; step < MAX_STEPS; step++) {
-    const next = new Map(val);
-    for (const n of f.nands) next.set(find(n.y), nand(val.get(find(n.a))!, val.get(find(n.b))!));
-    setFixed(next);
-    const changed = [...next].some(([k, v]) => val.get(k) !== v);
-    val = next;
+    let changed = false;
+    for (const n of f.nands) {
+      const y = find(n.y);
+      const v = nand(val.get(find(n.a))!, val.get(find(n.b))!);
+      if (val.get(y) !== v) {
+        val.set(y, v);
+        changed = true;
+      }
+    }
+    setFixed(val);
     if (!changed) {
       oscillating = false;
       break;
