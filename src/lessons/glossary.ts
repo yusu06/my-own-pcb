@@ -39,4 +39,9 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   encoder: { term: "인코더", short: "여러 입력 중 켜진 것의 번호를 2진수 코드로 바꿔 주는 회로. 디코더의 반대." },
   "priority-encoder": { term: "우선순위 인코더", short: "입력이 여러 개 동시에 켜지면 미리 정한 순서대로 가장 중요한 것의 번호만 내보내는 인코더." },
   mux: { term: "MUX(멀티플렉서)", short: "선택 신호에 따라 여러 입력 중 하나만 골라 출력으로 보내는 회로." },
+  carry: { term: "올림(캐리)", short: "덧셈에서 한 자리가 넘쳐 윗자리로 넘기는 1. 2진수에서는 1+1일 때 생긴다." },
+  "half-adder": { term: "반가산기", short: "1비트 두 개를 더해 합(XOR)과 올림(AND)을 내는 회로. 아랫자리 올림은 받지 못한다." },
+  "full-adder": { term: "전가산기", short: "1비트 두 개와 아랫자리 올림까지 세 개를 더하는 회로. 이어 붙이면 여러 자리 덧셈기가 된다." },
+  "twos-complement": { term: "2의 보수", short: "비트를 모두 뒤집고 1을 더해 음수를 나타내는 약속. 덧셈기 하나로 뺄셈까지 할 수 있다." },
+  comparator: { term: "비교기", short: "두 수의 크기를 비교해 큼·같음·작음을 알려 주는 회로." },
 };

@@ -69,3 +69,16 @@ test("MUX 기본 부품: s가 0이면 a, 1이면 b (NAND 4개)", () => {
   expect(nandCost(DEFAULT_CHIPS.mux.circuit, noLib)).toBe(4);
   expect(CHIP_LABEL.mux).toBe("MUX");
 });
+
+test("반가산기·전가산기 기본 부품 (NAND 5개, 9개)", () => {
+  expect(DEFAULT_CHIPS.ha.inputs).toEqual(["a", "b"]);
+  expect(DEFAULT_CHIPS.ha.outputs).toEqual(["s", "c"]);
+  expect(multiTable(DEFAULT_CHIPS.ha)).toEqual(["00", "10", "10", "01"]);
+  expect(nandCost(DEFAULT_CHIPS.ha.circuit, noLib)).toBe(5);
+  expect(DEFAULT_CHIPS.fa.inputs).toEqual(["a", "b", "cin"]);
+  expect(DEFAULT_CHIPS.fa.outputs).toEqual(["s", "cout"]);
+  // 출력 순서 s cout, 입력 a b cin
+  expect(multiTable(DEFAULT_CHIPS.fa)).toEqual(["00", "10", "10", "01", "10", "01", "01", "11"]);
+  expect(nandCost(DEFAULT_CHIPS.fa.circuit, noLib)).toBe(9);
+  expect([CHIP_LABEL.ha, CHIP_LABEL.fa]).toEqual(["반가산기", "전가산기"]);
+});

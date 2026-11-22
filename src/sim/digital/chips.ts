@@ -1,7 +1,7 @@
 import { ckt } from "../electric/ckt";
 import type { ChipDef, ChipLib } from "./sim";
 
-export type ChipName = "not" | "and" | "or" | "xor" | "mux";
+export type ChipName = "not" | "and" | "or" | "xor" | "mux" | "ha" | "fa";
 
 /** 부품함에 없을 때 대신 쓰는 기본 부품. NAND만으로 만들었다. 이름은 배포 후 바꾸지 않는다. */
 export const DEFAULT_CHIPS: Record<ChipName, ChipDef> = {
@@ -36,9 +36,31 @@ export const DEFAULT_CHIPS: Record<ChipName, ChipDef> = {
       ["s.y~ns.a", "s.y~ns.b", "a.y~n1.a", "ns.y~n1.b", "b.y~n2.a", "s.y~n2.b", "n1.y~n3.a", "n2.y~n3.b", "n3.y~y.a"],
     ),
   },
+  // 반가산기: s = a XOR b, c = a AND b (XOR 안의 NAND(a,b)를 다시 써서 5개)
+  ha: {
+    inputs: ["a", "b"],
+    outputs: ["s", "c"],
+    circuit: ckt(
+      ["a:in", "b:in", "n1:nand", "n2:nand", "n3:nand", "n4:nand", "n5:nand", "s:out", "c:out"],
+      ["a.y~n1.a", "b.y~n1.b", "a.y~n2.a", "n1.y~n2.b", "n1.y~n3.a", "b.y~n3.b", "n2.y~n4.a", "n3.y~n4.b", "n4.y~s.a", "n1.y~n5.a", "n1.y~n5.b", "n5.y~c.a"],
+    ),
+  },
+  // 전가산기: NAND 9개 (XOR 두 번 + 두 XOR의 첫 NAND를 다시 NAND하면 cout)
+  fa: {
+    inputs: ["a", "b", "cin"],
+    outputs: ["s", "cout"],
+    circuit: ckt(
+      ["a:in", "b:in", "cin:in", "n1:nand", "n2:nand", "n3:nand", "x:nand", "n5:nand", "n6:nand", "n7:nand", "n8:nand", "n9:nand", "s:out", "cout:out"],
+      [
+        "a.y~n1.a", "b.y~n1.b", "a.y~n2.a", "n1.y~n2.b", "b.y~n3.a", "n1.y~n3.b", "n2.y~x.a", "n3.y~x.b",
+        "x.y~n5.a", "cin.y~n5.b", "x.y~n6.a", "n5.y~n6.b", "cin.y~n7.a", "n5.y~n7.b", "n6.y~n8.a", "n7.y~n8.b", "n8.y~s.a",
+        "n1.y~n9.a", "n5.y~n9.b", "n9.y~cout.a",
+      ],
+    ),
+  },
 };
 
-export const CHIP_LABEL: Record<string, string> = { not: "NOT", and: "AND", or: "OR", xor: "XOR", mux: "MUX" };
+export const CHIP_LABEL: Record<string, string> = { not: "NOT", and: "AND", or: "OR", xor: "XOR", mux: "MUX", ha: "반가산기", fa: "전가산기" };
 
 const isObj = (v: unknown): v is Record<string, any> => typeof v === "object" && v !== null && !Array.isArray(v);
 const strList = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === "string");
