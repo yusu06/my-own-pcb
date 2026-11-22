@@ -84,6 +84,7 @@ export function openStore(kv: KV | null): Store {
       store.snapshot();
       store.data = next;
       protectSave = false; // 사용자가 직접 고른 백업이므로 덮어써도 된다
+      warning = null; // 손상 경고는 이제 옛일; 저장이 실패하면 write가 다시 경고를 건다
       store.save();
     },
   };

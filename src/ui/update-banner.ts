@@ -6,6 +6,13 @@ import { h } from "./dom";
 export function initUpdates(store: Store): void {
   if (!("serviceWorker" in navigator)) return;
   const updateSW = registerSW({
+    // 앱을 오래 켜 둬도 새 버전을 알 수 있게: 1시간마다, 그리고 앱으로 돌아올 때 확인
+    onRegisteredSW(_url, r) {
+      if (!r) return;
+      const check = () => navigator.onLine && void r.update().catch(() => {});
+      setInterval(check, 60 * 60 * 1000);
+      document.addEventListener("visibilitychange", () => document.visibilityState === "visible" && check());
+    },
     onNeedRefresh() {
       if (document.querySelector(".update-banner")) return;
       const banner = h(

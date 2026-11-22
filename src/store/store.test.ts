@@ -158,3 +158,10 @@ test("형식이 틀린 progress 항목은 SaveError", () => {
   expect(() => migrate({ ...emptySave(), progress: { "0-1": { status: "weird" } } })).toThrow(SaveError);
   expect(() => migrate(null)).toThrow(SaveError);
 });
+
+test("백업을 불러오면 손상 경고가 사라진다", () => {
+  const s = openStore(memKV({ [KEYS.save]: "{깨진json" }));
+  expect(s.warning).not.toBeNull();
+  s.importBackup(JSON.stringify({ app: "my-own-pcb", data: emptySave() }));
+  expect(s.warning).toBeNull();
+});

@@ -14,3 +14,5 @@ function safeStorage(): Storage | null {
 const store = openStore(safeStorage());
 startApp(document.getElementById("app")!, store);
 initUpdates(store);
+// 브라우저가 저장 공간이 부족할 때 진행 기록을 지우지 않도록 요청 (거절돼도 괜찮다)
+void navigator.storage?.persist?.().catch(() => {});

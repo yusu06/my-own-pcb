@@ -42,3 +42,12 @@ test("객관식", () => {
   expect(gradeQuiz(c, 1)).toBe("correct");
   expect(gradeQuiz(c, 0)).toBe("wrong");
 });
+
+test("parseNumberInput: 천 단위 쉼표, .5, 유니코드 마이너스", () => {
+  expect(parseNumberInput("1,000")).toBe(1000);
+  expect(parseNumberInput("10,000Ω")).toBe(10000);
+  expect(parseNumberInput("1,5")).toBe(1.5);
+  expect(parseNumberInput(".5")).toBe(0.5);
+  expect(parseNumberInput("−2")).toBe(-2);
+  expect(parseNumberInput(".")).toBeNull();
+});

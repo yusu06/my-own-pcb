@@ -19,8 +19,6 @@ export function renderHome(root: HTMLElement, ctx: Ctx): void {
   const d = ctx.store.data;
   const open = (id: string) => {
     if (lessonState(id, d, LESSONS) === "locked" && !confirm("앞 단원을 건너뛰고 열까요?")) return;
-    ctx.store.data = openLesson(id, ctx.store.data, LESSONS, Date.now());
-    ctx.store.save();
     ctx.go(`#/lesson/${id}`);
   };
 
