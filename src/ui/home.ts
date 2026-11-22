@@ -54,7 +54,7 @@ export function renderHome(root: HTMLElement, ctx: Ctx): void {
                   "button",
                   { class: `lesson-row st-${st}`, type: "button", onclick: () => open(l.id) },
                   h("span", { class: "emoji", "aria-hidden": "true" }, l.emoji),
-                  h("span", { class: "row-main" }, h("strong", {}, `${l.id} ${l.title}`), h("span", { class: "muted" }, `약 ${l.minutes}분`)),
+                  h("span", { class: "row-main" }, h("strong", {}, `${l.id} ${l.title}`), h("span", { class: "muted" }, `약 ${l.minutes}분` + (d.progress[l.id]?.best !== undefined ? ` · NAND ${d.progress[l.id]!.best}개` : ""))),
                   h("span", { class: "badge" }, BADGE[st]),
                 ),
               );
@@ -72,6 +72,7 @@ export function renderHome(root: HTMLElement, ctx: Ctx): void {
       h(
         "nav",
         { class: "bottom-links" },
+        h("a", { href: "#/parts", class: "btn ghost" }, "🧩 부품함"),
         h("a", { href: "#/glossary", class: "btn ghost" }, "📖 용어집"),
         h("a", { href: "#/settings", class: "btn ghost" }, "⚙ 설정"),
       ),

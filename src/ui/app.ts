@@ -5,6 +5,7 @@ import { renderHome } from "./home";
 import { renderLesson } from "./lesson";
 import { renderGlossary } from "./glossary";
 import { renderSettings } from "./settings";
+import { renderPartsBox } from "./parts-box";
 import { showTermPopup } from "./term-popup";
 
 export interface Ctx {
@@ -34,6 +35,7 @@ export function startApp(root: HTMLElement, store: Store): void {
     if (r.name === "lesson") renderLesson(root, ctx, findLesson(r.id)!);
     else if (r.name === "glossary") renderGlossary(root, ctx);
     else if (r.name === "settings") renderSettings(root, ctx);
+    else if (r.name === "parts") renderPartsBox(root, ctx);
     else renderHome(root, ctx);
   };
   applyTheme(store.data.settings.theme);

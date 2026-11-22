@@ -11,6 +11,7 @@ test("parseRoute", () => {
   expect(parseRoute("#/lesson/9-9", ids)).toEqual({ name: "home" });
   expect(parseRoute("#/glossary", ids)).toEqual({ name: "glossary" });
   expect(parseRoute("#/settings", ids)).toEqual({ name: "settings" });
+  expect(parseRoute("#/parts", ids)).toEqual({ name: "parts" });
   expect(parseRoute("#/zzz", ids)).toEqual({ name: "home" });
 });
 

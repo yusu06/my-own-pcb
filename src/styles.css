@@ -170,6 +170,9 @@ div.hero { background: var(--card); color: var(--fg); border: 1px solid var(--li
   background: var(--card); border: 1px solid var(--line); border-radius: 12px;
 }
 .glossary dt { font-weight: 700; margin-top: 12px; }
+.parts-box { list-style: none; padding: 0; display: grid; gap: 8px; }
+.part-row { display: grid; gap: 2px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }
+.part-row.fallback strong { color: var(--muted); }
 .glossary dd { margin: 2px 0 0; color: var(--muted); }
 .segmented { display: flex; gap: 8px; }
 .segmented .btn { flex: 1; padding: 0 8px; }
