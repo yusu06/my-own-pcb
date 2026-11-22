@@ -327,3 +327,9 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
 .tl-out .tl-name { font-weight: 600; }
 .tl-cell.bad { background: color-mix(in srgb, var(--bad) 30%, transparent); outline: 1px solid var(--bad); font-weight: 600; }
 .tl-note { color: var(--muted); font-size: 0.8rem; margin: 0.4rem 0 0; }
+.state-figure { width: 100%; max-width: 440px; }
+.state-figure .sd-node { fill: var(--card); stroke: var(--accent); stroke-width: 2.5; }
+.state-figure .sd-edge { fill: none; stroke: var(--fg); stroke-width: 1.8; }
+.state-figure .sd-head { fill: var(--fg); }
+.state-figure .sd-name { fill: var(--fg); font-size: 13px; font-weight: 600; }
+.state-figure .sd-label { fill: var(--muted); font-size: 11px; }
