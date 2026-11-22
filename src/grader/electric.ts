@@ -1,3 +1,4 @@
+import type { Bit } from "../sim/digital/sim";
 import { buildNets, pinKey } from "../sim/electric/netlist";
 import { pinNames, SWITCH_KINDS } from "../sim/electric/parts";
 import { solve, type Solution } from "../sim/electric/solve";
@@ -11,6 +12,12 @@ export type ElectricCheck =
   | { kind: "noBurn" }
   | { kind: "noShort" };
 
+export interface LogicRow {
+  inputs: (0 | 1)[];
+  expect: (0 | 1)[];
+  got: Bit[];
+}
+
 export interface TruthRow {
   inputs: (0 | 1)[];
   expect: 0 | 1;
@@ -21,6 +28,8 @@ export interface CheckResult {
   ok: boolean;
   message: string;
   rows?: TruthRow[];
+  /** 논리 과제 진리표(출력이 여러 개일 수 있다) */
+  lrows?: LogicRow[];
 }
 
 const NAME: Partial<Record<PartKind, string>> = { lamp: "전구", led: "LED", resistor: "저항", npn: "트랜지스터", button: "버튼", "button-nc": "버튼", switch: "스위치" };

@@ -1,7 +1,7 @@
 import { sanitizeCircuit } from "../editor/sanitize";
 import { mountEditor } from "../editor/view";
 import type { CheckResult } from "../grader/electric";
-import type { Lesson } from "../lessons/types";
+import type { ElectricTask, Lesson } from "../lessons/types";
 import { markTaskDone, saveWork } from "../progress";
 import { renderRich } from "../rich";
 import type { Ctx } from "./app";
@@ -11,7 +11,7 @@ const HINT_AFTER = 3;
 const ANSWER_AFTER = 5;
 
 export function renderElectricTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed: () => void): HTMLElement {
-  const task = lesson.tasks[ti];
+  const task = lesson.tasks[ti] as ElectricTask; // Task 7에서 논리 과제까지 일반화
   const key = `${lesson.id}#${ti}`;
   const rich = (s: string) => renderRich(s, ctx.showTerm);
   const already = ctx.store.data.progress[lesson.id]?.tasksDone.includes(ti) ?? false;

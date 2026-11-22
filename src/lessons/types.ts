@@ -1,5 +1,6 @@
 import type { ElectricCheck } from "../grader/electric";
 import type { Circuit, PartKind } from "../sim/electric/types";
+import type { ChipName } from "../sim/digital/chips";
 
 /** body/q/explain 안의 [[용어id]]는 탭하면 용어 설명이 뜬다. */
 export interface Card {
@@ -13,12 +14,17 @@ export type QuizItem =
   /** tolerance = 상대 오차 (0.05 = ±5%) */
   | { kind: "number"; q: string; answer: number; tolerance: number; unit: string; explain: string };
 
-/** 팔레트 부품은 각각 1개, id 고정(채점이 id로 부품을 찾는다). values = 저항값 선택지 */
+/**
+ * 팔레트 부품은 기본 1개, id 고정(채점이 id로 부품을 찾는다). values = 저항값 선택지.
+ * multi = 여러 개 놓기(id는 `${id}1`, `${id}2`…). chip = kind가 "chip"일 때 부품함 부품 이름.
+ */
 export interface PaletteItem {
   id: string;
   kind: PartKind;
   label: string;
   values?: number[];
+  multi?: boolean;
+  chip?: ChipName;
 }
 
 export interface ElectricTask {
@@ -34,8 +40,29 @@ export interface ElectricTask {
   hint: string;
 }
 
-/** M3 이후 logic/verilog 과제로 확장한다. */
-export type Task = ElectricTask;
+export interface LogicTask {
+  kind: "logic";
+  title: string;
+  goal: string;
+  hint: string;
+  palette: PaletteItem[];
+  /** in·out 부품(잠김). id = inputs·outputs 이름 */
+  preset: Circuit;
+  inputs: string[];
+  outputs: string[];
+  /** 입력 조합 순서(첫 입력이 최상위 비트)마다 출력값 */
+  expect: (0 | 1)[][];
+  reference: Circuit;
+  wrong: Circuit[];
+  /** 통과하면 이 이름으로 부품함에 저장 */
+  saveAs?: ChipName;
+  /** NAND 환산 원가 목표. costRequired면 통과 조건, 아니면 ⭐만 */
+  maxCost?: number;
+  costRequired?: boolean;
+}
+
+/** M4에서 verilog 과제를 더한다. */
+export type Task = ElectricTask | LogicTask;
 
 export interface Lesson {
   id: string;
