@@ -13,6 +13,8 @@ export interface Design {
   run(inputs: Record<string, number>): Record<string, number>;
   /** 상태를 가진 시뮬레이션. 신호 값이 step 사이에 남고, posedge 블록은 에지(0→1)에서 돈다 */
   sim(): { step(inputs: Record<string, number>): Record<string, number> };
+  /** posedge 블록이 있으면 첫 블록의 줄 번호, 없으면 null */
+  seqLine: number | null;
 }
 
 interface Sig {
@@ -125,7 +127,7 @@ export function compile(src: string, top: string): Design {
     };
   };
 
-  return { inputs, outputs, run: (given) => sim().step(given), sim };
+  return { inputs, outputs, run: (given) => sim().step(given), sim, seqLine: seqs[0]?.line ?? null };
 }
 
 function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]): Scope {

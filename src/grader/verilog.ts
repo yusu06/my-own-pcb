@@ -69,6 +69,7 @@ export function gradeVerilog(src: string, task: VerilogTask): VerilogGrade {
       return { error: null, rows: [], total: steps.length - from, passed, timeline };
     }
 
+    if (d.seqLine !== null) return bad(new VerilogError(d.seqLine, "순차 회로(posedge)는 2장에서 배워요. 이 과제는 always @(*)나 assign으로 써요."));
     const spec = task.spec;
     const all = verilogCombos(task).map((inputs) => {
       const expect = spec(inputs);

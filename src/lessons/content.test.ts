@@ -53,6 +53,13 @@ describe.each(verilogTasks)("%s (Verilog)", (_name, t) => {
     expect(() => parse(t.skeleton)).not.toThrow();
     expect(gradeVerilog(t.skeleton, t).passed).toBe(false);
   });
+  if (t.seq && t.inputs.some((p) => p.name === "rst") && t.reference.includes("@(posedge clk)")) {
+    test("비동기 리셋(or posedge rst)으로 써도 통과한다", () => {
+      // 오류 안내가 이 형식을 예로 들기 때문에, 각본은 두 방식을 가리지 않아야 한다
+      const asyncRef = t.reference.replace("@(posedge clk)", "@(posedge clk or posedge rst)");
+      expect(gradeVerilog(asyncRef, t).passed).toBe(true);
+    });
+  }
   test("입력·기대값이 포트 너비 안에 있다", () => {
     if (t.seq) {
       const m = t.seq.model();

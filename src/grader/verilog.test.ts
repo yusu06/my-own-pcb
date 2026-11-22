@@ -105,3 +105,9 @@ test("순차 Verilog는 타임라인으로 채점한다", () => {
   expect(bad.timeline![2].bad!.some(Boolean)).toBe(true);
   expect(gradeVerilog(DFF("  always @(posedge clk) q <= d;").replace("input d", "input [1:0] d"), seqTask).error?.message).toContain("1비트");
 });
+
+test("조합 과제에서 posedge를 쓰면 안내 오류", () => {
+  const g = gradeVerilog(code("  always @(posedge a) y <= b;", "input a, input b, output reg y"), task);
+  expect(g.passed).toBe(false);
+  expect(g.error?.message).toContain("순차 회로");
+});

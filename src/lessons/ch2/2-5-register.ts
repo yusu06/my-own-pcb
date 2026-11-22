@@ -104,7 +104,7 @@ export const lesson: Lesson = {
           { rst: 1, en: 1, d: 7 },
           { rst: 0, en: 0, d: 1 },
           { rst: 0, en: 1, d: 6 },
-        ]),
+        ], ["rst"]),
         model() {
           let q = 0;
           let last = 0;

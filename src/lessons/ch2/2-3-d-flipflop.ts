@@ -140,8 +140,9 @@ export const lesson: Lesson = {
           { clk: 0, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 0 },
           { clk: 0, rst: 0, d: 0 }, { clk: 1, rst: 0, d: 0 },
           { clk: 0, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 1 },
-          { clk: 0, rst: 1, d: 1 }, { clk: 1, rst: 1, d: 1 },
-          { clk: 0, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 1 },
+          // rst는 clk가 올라가는 단계에서만 바꾼다(동기·비동기 리셋 모두 같은 결과)
+          { clk: 0, rst: 0, d: 1 }, { clk: 1, rst: 1, d: 1 },
+          { clk: 0, rst: 1, d: 1 }, { clk: 1, rst: 0, d: 1 },
         ],
         model: ffModel,
       },
