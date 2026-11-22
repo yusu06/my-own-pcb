@@ -9,8 +9,12 @@ export interface PortInfo {
 export interface Design {
   inputs: PortInfo[];
   outputs: PortInfo[];
-  /** 조합 회로 한 번 계산. 조합 루프면 VerilogError */
+  /** 조합 회로 한 번 계산(새 상태에서). 조합 루프면 VerilogError */
   run(inputs: Record<string, number>): Record<string, number>;
+  /** 상태를 가진 시뮬레이션. 신호 값이 step 사이에 남고, posedge 블록은 에지(0→1)에서 돈다 */
+  sim(): { step(inputs: Record<string, number>): Record<string, number> };
+  /** posedge 블록이 있으면 첫 블록의 줄 번호, 없으면 null */
+  seqLine: number | null;
 }
 
 interface Sig {
@@ -30,11 +34,15 @@ interface Proc {
   line: number;
   targets: number[];
   run: (v: number[]) => void;
+  /** posedge 블록이면 에지 신호 id들 */
+  edges?: number[];
 }
 interface Ctx {
   sigs: Sig[];
   procs: Proc[];
   mods: Map<string, ModuleDecl>;
+  /** posedge 블록의 논블로킹 대입: 모든 블록을 돈 뒤 한꺼번에 반영 */
+  pending: (() => void)[];
 }
 type Mode = "assign" | "always" | "inst";
 interface Lhs {
@@ -67,37 +75,59 @@ export function compile(src: string, top: string): Design {
     mods.set(m.name, m);
   }
   const topMod = mods.get(top) ?? fail(1, `모듈 ‘${top}’이(가) 없어요. 뼈대 코드의 module ${top} 이름을 바꾸지 마세요.`);
-  const ctx: Ctx = { sigs: [], procs: [], mods };
+  const ctx: Ctx = { sigs: [], procs: [], mods, pending: [] };
   const scope = elabModule(topMod, "", ctx, []);
   const portSig = (name: string) => (scope.get(name) as { s: Sig }).s;
   const inputs = topMod.ports.filter((p) => p.dir === "input").map((p) => ({ name: p.name, width: p.msb - p.lsb + 1 }));
   const outputs = topMod.ports.filter((p) => p.dir === "output").map((p) => ({ name: p.name, width: p.msb - p.lsb + 1 }));
-  const { sigs, procs } = ctx;
+  const { sigs, pending } = ctx;
+  const comb = ctx.procs.filter((p) => !p.edges);
+  const seqs = ctx.procs.filter((p) => p.edges);
 
-  return {
-    inputs,
-    outputs,
-    run(given) {
-      const v = new Array<number>(sigs.length).fill(0);
-      for (const p of inputs) v[portSig(p.name).id] = fit(Math.trunc(Number(given[p.name]) || 0), p.width);
-      let lastLine = procs[0]?.line ?? 1;
-      for (let pass = 0; ; pass++) {
-        let changed = false;
-        for (const p of procs) {
-          const old = p.targets.map((i) => v[i]);
-          p.run(v);
-          if (p.targets.some((i, k) => v[i] !== old[k])) {
-            if (!changed) lastLine = p.line; // 이번 바퀴에 처음 바뀐 곳이 루프의 출발점에 가깝다
-            changed = true;
-          }
+  const settle = (v: number[]) => {
+    let lastLine = comb[0]?.line ?? 1;
+    for (let pass = 0; ; pass++) {
+      let changed = false;
+      for (const p of comb) {
+        const old = p.targets.map((i) => v[i]);
+        p.run(v);
+        if (p.targets.some((i, k) => v[i] !== old[k])) {
+          if (!changed) lastLine = p.line; // 이번 바퀴에 처음 바뀐 곳이 루프의 출발점에 가깝다
+          changed = true;
         }
-        if (!changed) break;
-        if (pass >= MAX_PASSES)
-          fail(lastLine, "조합 루프: 신호가 계속 바뀌어서 값이 정해지지 않아요. 출력이 돌고 돌아 자기 자신을 바꾸고 있지 않은지 보세요.");
       }
-      return Object.fromEntries(outputs.map((p) => [p.name, v[portSig(p.name).id]]));
-    },
+      if (!changed) return;
+      if (pass >= MAX_PASSES)
+        fail(lastLine, "조합 루프: 신호가 계속 바뀌어서 값이 정해지지 않아요. 출력이 돌고 돌아 자기 자신을 바꾸고 있지 않은지 보세요.");
+    }
   };
+
+  const sim = () => {
+    const v = new Array<number>(sigs.length).fill(0);
+    // 에지 신호의 직전 값(전원 직후 0)
+    const seen = new Map<number, number>();
+    return {
+      step(given: Record<string, number>) {
+        for (const p of inputs) v[portSig(p.name).id] = fit(Math.trunc(Number(given[p.name]) || 0), p.width);
+        settle(v);
+        for (let round = 0; ; round++) {
+          const fired = seqs.filter((p) => p.edges!.some((i) => (seen.get(i) ?? 0) === 0 && v[i] % 2 === 1));
+          for (const p of seqs) for (const i of p.edges!) seen.set(i, v[i] % 2);
+          if (!fired.length) break;
+          if (round >= MAX_PASSES)
+            fail(fired[0].line, "클럭 연쇄: 클럭 신호가 계속 다시 바뀌어요. posedge 블록이 바꾼 값이 자기 클럭을 또 바꾸고 있지 않은지 보세요.");
+          pending.length = 0;
+          for (const p of fired) p.run(v);
+          for (const w of pending) w();
+          pending.length = 0;
+          settle(v);
+        }
+        return Object.fromEntries(outputs.map((p) => [p.name, v[portSig(p.name).id]]));
+      },
+    };
+  };
+
+  return { inputs, outputs, run: (given) => sim().step(given), sim, seqLine: seqs[0]?.line ?? null };
 }
 
 function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]): Scope {
@@ -122,8 +152,8 @@ function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]):
     }
   }
 
-  const ex = new ExprCompiler(scope);
-  const addProc = (line: number, lhsList: Lhs[], run: (v: number[]) => void) => {
+  const ex = new ExprCompiler(scope, ctx.pending);
+  const addProc = (line: number, lhsList: Lhs[], run: (v: number[]) => void, edges?: number[]) => {
     // 같은 비트에 값을 넣는 곳이 둘 이상이면 오류
     const own = new Map<Sig, number>();
     for (const l of lhsList) for (const b of l.bits) own.set(b.s, (own.get(b.s) ?? 0) | b.mask);
@@ -131,7 +161,7 @@ function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]):
       if ((s.driven & mask) >>> 0) fail(line, `‘${shortName(s)}’에 값을 넣는 곳이 여러 곳이에요. 한 신호에는 한 곳에서만 값을 넣어요.`);
       s.driven = (s.driven | mask) >>> 0;
     }
-    ctx.procs.push({ line, targets: [...own.keys()].map((s) => s.id), run });
+    ctx.procs.push({ line, targets: [...own.keys()].map((s) => s.id), run, edges });
   };
 
   for (const it of mod.items) {
@@ -143,8 +173,9 @@ function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]):
       addProc(it.line, [lhs], (v) => lhs.write(v, f(v)));
     } else if (it.t === "always") {
       const lhsList: Lhs[] = [];
-      const run = ex.stmt(it.body, lhsList);
-      addProc(it.line, lhsList, run);
+      const edges = it.edges?.map((n) => ex.edge(n, it.line));
+      const run = ex.stmt(it.body, lhsList, !!edges);
+      addProc(it.line, lhsList, run, edges);
     } else if (it.t === "instance") {
       const child = ctx.mods.get(it.module) ?? fail(it.line, `모듈 ‘${it.module}’이(가) 없어요. 같은 파일에 module ${it.module} ... endmodule을 써 주세요.`);
       if (stack.includes(child.name) || child.name === mod.name) fail(it.line, `모듈 ‘${child.name}’이(가) 자기 자신을 품고 있어요. 모듈 안에 같은 모듈을 넣을 수 없어요.`);
@@ -210,7 +241,17 @@ function constExpr(e: Expr, scope: Scope, line: number): { f: () => number; widt
 }
 
 class ExprCompiler {
-  constructor(private scope: Scope) {}
+  constructor(
+    private scope: Scope,
+    private pending: (() => void)[] = [],
+  ) {}
+
+  /** posedge 신호(읽는 신호로 표시) */
+  edge(name: string, line: number): number {
+    const s = this.sig(name, line);
+    s.read = true;
+    return s.id;
+  }
 
   private sym(name: string, line: number): Sym {
     return this.scope.get(name) ?? fail(line, `선언하지 않은 이름 ‘${name}’ — wire ${name}; 처럼 먼저 선언하거나 철자를 확인해 주세요.`);
@@ -430,19 +471,19 @@ class ExprCompiler {
     };
   }
 
-  /** always 블록 안 문장. 값을 넣는 왼쪽들을 out에 모은다 */
-  stmt(s: Stmt, out: Lhs[]): (v: number[]) => void {
+  /** always 블록 안 문장. 값을 넣는 왼쪽들을 out에 모은다. seq = posedge 블록(<=는 나중에 한꺼번에 반영) */
+  stmt(s: Stmt, out: Lhs[], seq = false): (v: number[]) => void {
     switch (s.t) {
       case "empty":
         return () => {};
       case "block": {
-        const fs = s.body.map((b) => this.stmt(b, out));
+        const fs = s.body.map((b) => this.stmt(b, out, seq));
         return (v) => fs.forEach((f) => f(v));
       }
       case "if": {
         const c = this.cx(s.c, this.sw(s.c));
-        const a = this.stmt(s.then, out);
-        const b = s.else ? this.stmt(s.else, out) : null;
+        const a = this.stmt(s.then, out, seq);
+        const b = s.else ? this.stmt(s.else, out, seq) : null;
         return (v) => (c(v) ? a(v) : b?.(v));
       }
       case "case": {
@@ -454,7 +495,7 @@ class ExprCompiler {
             const b = this.cx(l, C);
             return (v: number[]) => a(v) === b(v);
           }),
-          body: this.stmt(it.body, out),
+          body: this.stmt(it.body, out, seq),
         }));
         if (arms.filter((a) => !a.tests).length > 1) fail(s.line, "case 안에 default가 두 개 있어요.");
         return (v) => {
@@ -466,6 +507,13 @@ class ExprCompiler {
         const lhs = this.lhs(s.lhs, "always");
         out.push(lhs);
         const f = this.cx(s.rhs, Math.max(lhs.width, this.sw(s.rhs)));
+        if (seq && s.nb) {
+          const q = this.pending;
+          return (v) => {
+            const x = f(v); // 오른쪽은 지금 값으로 계산하고, 쓰기는 미룬다
+            q.push(() => lhs.write(v, x));
+          };
+        }
         return (v) => lhs.write(v, f(v));
       }
     }

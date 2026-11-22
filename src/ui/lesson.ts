@@ -8,6 +8,7 @@ import { h } from "./dom";
 import { warningBar } from "./home";
 import { renderQuiz } from "./quiz-view";
 import { gateFigure } from "./figures";
+import { renderTimeline } from "./timeline";
 import { renderCircuitTask } from "./task-circuit";
 import { renderVerilogTask } from "./task-verilog";
 
@@ -34,6 +35,7 @@ export function renderLesson(root: HTMLElement, ctx: Ctx, lesson: Lesson): void 
       h("h2", {}, c.title),
       h("p", {}, rich(c.body)),
       c.figure ? h("div", { class: "figure" }, gateFigure(c.figure)) : null,
+      c.timeline ? renderTimeline(c.timeline) : null,
     );
   const taskDone = (i: number) => ctx.store.data.progress[lesson.id]?.tasksDone.includes(i) ?? false;
 

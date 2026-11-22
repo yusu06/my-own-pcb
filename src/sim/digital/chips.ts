@@ -1,7 +1,7 @@
 import { ckt } from "../electric/ckt";
 import type { ChipDef, ChipLib } from "./sim";
 
-export type ChipName = "not" | "and" | "or" | "xor" | "mux" | "ha" | "fa";
+export type ChipName = "not" | "and" | "or" | "xor" | "mux" | "ha" | "fa" | "sr" | "dlatch" | "dff";
 
 /** 부품함에 없을 때 대신 쓰는 기본 부품. NAND만으로 만들었다. 이름은 배포 후 바꾸지 않는다. */
 export const DEFAULT_CHIPS: Record<ChipName, ChipDef> = {
@@ -58,9 +58,40 @@ export const DEFAULT_CHIPS: Record<ChipName, ChipDef> = {
       ],
     ),
   },
+  // SR 래치(0일 때 동작): s_n=0이면 q=1, r_n=0이면 q=0, 둘 다 1이면 유지
+  sr: {
+    inputs: ["s_n", "r_n"],
+    outputs: ["q"],
+    circuit: ckt(["s_n:in", "r_n:in", "n1:nand", "n2:nand", "q:out"], ["s_n.y~n1.a", "n2.y~n1.b", "r_n.y~n2.a", "n1.y~n2.b", "n1.y~q.a"]),
+  },
+  // D 래치: en=1이면 q=d, en=0이면 유지 (NAND 2개가 SR 래치를 0으로 눌러 준다)
+  dlatch: {
+    inputs: ["d", "en"],
+    outputs: ["q"],
+    circuit: ckt(
+      ["d:in", "en:in", "s:nand", "r:nand", "n1:nand", "n2:nand", "q:out"],
+      ["d.y~s.a", "en.y~s.b", "s.y~r.a", "en.y~r.b", "s.y~n1.a", "n2.y~n1.b", "r.y~n2.a", "n1.y~n2.b", "n1.y~q.a"],
+    ),
+  },
+  // 상승 에지 D 플립플롭: clk=0일 때 열리는 앞 래치(master) + clk=1일 때 열리는 뒤 래치(slave)
+  dff: {
+    inputs: ["d", "clk"],
+    outputs: ["q"],
+    circuit: ckt(
+      ["d:in", "clk:in", "nc:nand", "ms:nand", "mr:nand", "m1:nand", "m2:nand", "ss:nand", "sr:nand", "s1:nand", "s2:nand", "q:out"],
+      [
+        "clk.y~nc.a", "clk.y~nc.b",
+        "d.y~ms.a", "nc.y~ms.b", "ms.y~mr.a", "nc.y~mr.b", "ms.y~m1.a", "m2.y~m1.b", "mr.y~m2.a", "m1.y~m2.b",
+        "m1.y~ss.a", "clk.y~ss.b", "ss.y~sr.a", "clk.y~sr.b", "ss.y~s1.a", "s2.y~s1.b", "sr.y~s2.a", "s1.y~s2.b", "s1.y~q.a",
+      ],
+    ),
+  },
 };
 
-export const CHIP_LABEL: Record<string, string> = { not: "NOT", and: "AND", or: "OR", xor: "XOR", mux: "MUX", ha: "반가산기", fa: "전가산기" };
+export const CHIP_LABEL: Record<string, string> = {
+  not: "NOT", and: "AND", or: "OR", xor: "XOR", mux: "MUX", ha: "반가산기", fa: "전가산기",
+  sr: "SR 래치", dlatch: "D 래치", dff: "D 플립플롭",
+};
 
 const isObj = (v: unknown): v is Record<string, any> => typeof v === "object" && v !== null && !Array.isArray(v);
 const strList = (v: unknown): v is string[] => Array.isArray(v) && v.length > 0 && v.every((s) => typeof s === "string");

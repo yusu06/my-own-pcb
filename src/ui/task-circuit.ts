@@ -11,6 +11,7 @@ import { SWITCH_KINDS } from "../sim/electric/parts";
 import type { ChipRef, Circuit } from "../sim/electric/types";
 import type { Ctx } from "./app";
 import { h } from "./dom";
+import { renderTimeline } from "./timeline";
 
 const HINT_AFTER = 3;
 const ANSWER_AFTER = 5;
@@ -101,6 +102,7 @@ export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
             ),
           );
         }
+        if (r.timeline) item.append(renderTimeline(r.timeline));
         if (r.lrows && task.kind === "logic") {
           const name = (id: string) => task.labels?.[id] ?? id.toUpperCase();
           item.append(

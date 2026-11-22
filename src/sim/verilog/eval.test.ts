@@ -165,3 +165,79 @@ test("조합 루프는 멈추고 오류", () => {
   // 안정되는 되먹임(래치처럼 값을 유지)은 오류가 아니다
   expect(run(mod("input a, output y", "  wire t;\n  assign t = a | (t & 0);\n  assign y = t;"), { a: 1 }).y).toBe(1);
 });
+
+const steps = (src: string, ins: Record<string, number>[]) => {
+  const s = compile(src, "m").sim();
+  return ins.map((i) => s.step(i));
+};
+const serr = (src: string, ins: Record<string, number>[]): string => {
+  try {
+    steps(src, ins);
+  } catch (e) {
+    expect(e).toBeInstanceOf(VerilogError);
+    return (e as Error).message;
+  }
+  throw new Error("오류가 나야 함");
+};
+
+test("D 플립플롭은 상승 에지에서만 d를 잡는다", () => {
+  const src = mod("input clk, input d, output reg q", "  always @(posedge clk) q <= d;");
+  const r = steps(src, [{ clk: 0, d: 1 }, { clk: 1, d: 1 }, { clk: 1, d: 0 }, { clk: 0, d: 0 }, { clk: 1, d: 0 }]);
+  expect(r.map((o) => o.q)).toEqual([0, 1, 1, 1, 0]);
+});
+
+test("논블로킹 대입은 한꺼번에 반영된다(맞바꾸기)", () => {
+  const src = mod(
+    "input clk, input rst, output reg a, output reg b",
+    "  always @(posedge clk) begin\n    if (rst) begin a <= 1; b <= 0; end\n    else begin a <= b; b <= a; end\n  end",
+  );
+  const r = steps(src, [{ clk: 0, rst: 1 }, { clk: 1, rst: 1 }, { clk: 0, rst: 0 }, { clk: 1, rst: 0 }, { clk: 0, rst: 0 }, { clk: 1, rst: 0 }]);
+  expect(r.map((o) => [o.a, o.b])).toEqual([[0, 0], [1, 0], [1, 0], [0, 1], [0, 1], [1, 0]]);
+});
+
+test("블로킹 대입은 posedge 안에서 바로 반영된다", () => {
+  const src = mod("input clk, output reg [3:0] a, output reg [3:0] b", "  always @(posedge clk) begin\n    a = a + 1;\n    b = a;\n  end");
+  const r = steps(src, [{ clk: 0 }, { clk: 1 }]);
+  expect(r[1]).toEqual({ a: 1, b: 1 });
+});
+
+test("비동기 리셋: rst가 올라가면 클럭 없이도 0", () => {
+  const src = mod(
+    "input clk, input rst, output reg [3:0] q",
+    "  always @(posedge clk or posedge rst)\n    if (rst) q <= 0;\n    else q <= q + 1;",
+  );
+  const c = (clk: number, rst = 0) => ({ clk, rst });
+  const r = steps(src, [c(0), c(1), c(0), c(1), c(0), c(1), c(0, 1)]);
+  expect(r.map((o) => o.q)).toEqual([0, 1, 1, 2, 2, 3, 0]);
+});
+
+test("posedge 블록이 만든 신호가 다른 블록의 클럭이 된다(연쇄)", () => {
+  const src = mod(
+    "input clk, output reg t, output reg u",
+    "  always @(posedge clk) t <= ~t;\n  always @(posedge t) u <= ~u;",
+  );
+  const r = steps(src, [0, 1, 0, 1, 0, 1, 0, 1].map((clk) => ({ clk })));
+  expect(r.map((o) => o.t)).toEqual([0, 1, 1, 0, 0, 1, 1, 0]);
+  expect(r.map((o) => o.u)).toEqual([0, 1, 1, 1, 1, 0, 0, 0]);
+});
+
+test("조합 always에서 값을 안 넣으면 이전 값이 남는다(래치)", () => {
+  const src = mod("input on, input off, output reg q", "  always @(*)\n    if (on) q = 1;\n    else if (off) q = 0;");
+  const r = steps(src, [{ on: 1, off: 0 }, { on: 0, off: 0 }, { on: 0, off: 1 }, { on: 0, off: 0 }]);
+  expect(r.map((o) => o.q)).toEqual([1, 1, 0, 0]);
+});
+
+test("순차 회로 정적 검사", () => {
+  expect(err(mod("input clk, input d, output reg q", "  always @(posedge clk) q <= d;\n  always @(*) q = d;"))).toContain("여러 곳");
+  expect(err(mod("input clk, input d, output q", "  always @(posedge clk) q <= d;"))).toContain("wire");
+  expect(err(mod("input d, output reg q", "  always @(posedge clk) q <= d;"))).toContain("clk");
+});
+
+test("자기 자신을 클럭으로 쓰는 끝없는 연쇄는 오류", () => {
+  // x가 바뀌면 g2가, y가 바뀌면 g1이 다시 올라가 서로를 끝없이 깨운다
+  const src = mod(
+    "input clk, output reg x, output reg y",
+    "  wire g1 = clk & ~(x ^ y);\n  wire g2 = clk & (x ^ y);\n  always @(posedge g1) x <= ~x;\n  always @(posedge g2) y <= ~y;",
+  );
+  expect(serr(src, [{ clk: 0 }, { clk: 1 }])).toContain("클럭 연쇄");
+});

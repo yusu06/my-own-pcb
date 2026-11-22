@@ -53,7 +53,23 @@ describe.each(verilogTasks)("%s (Verilog)", (_name, t) => {
     expect(() => parse(t.skeleton)).not.toThrow();
     expect(gradeVerilog(t.skeleton, t).passed).toBe(false);
   });
-  test("입력 비트 합이 10 이하이고 기대값이 출력 너비 안에 있다", () => {
+  if (t.seq && t.inputs.some((p) => p.name === "rst") && t.reference.includes("@(posedge clk)")) {
+    test("비동기 리셋(or posedge rst)으로 써도 통과한다", () => {
+      // 오류 안내가 이 형식을 예로 들기 때문에, 각본은 두 방식을 가리지 않아야 한다
+      const asyncRef = t.reference.replace("@(posedge clk)", "@(posedge clk or posedge rst)");
+      expect(gradeVerilog(asyncRef, t).passed).toBe(true);
+    });
+  }
+  test("입력·기대값이 포트 너비 안에 있다", () => {
+    if (t.seq) {
+      const m = t.seq.model();
+      for (const i of t.seq.steps) {
+        for (const p of t.inputs) expect(i[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
+        const o = m(i);
+        for (const p of t.outputs) expect(o[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
+      }
+      return;
+    }
     for (const i of verilogCombos(t)) {
       const o = t.spec(i);
       for (const p of t.outputs) expect(o[p.name], `${p.name} @ ${JSON.stringify(i)}`).toBeLessThan(2 ** p.width);
@@ -83,6 +99,12 @@ describe.each(circuitTasks)("%s", (_name, t) => {
       const ids = (k: string) => t.preset.parts.filter((p) => p.kind === k).map((p) => p.id);
       expect(ids("in")).toEqual(t.inputs);
       expect(ids("out")).toEqual(t.outputs);
+      if (t.seq) {
+        // 순차 과제: 진리표 대신 각본. 단계마다 모든 입력을 정한다
+        expect(t.expect).toEqual([]);
+        for (const s of t.seq.steps) expect(Object.keys(s).sort()).toEqual([...t.inputs].sort());
+        return;
+      }
       expect(t.expect).toHaveLength(1 << t.inputs.length);
       for (const row of t.expect) expect(row).toHaveLength(t.outputs.length);
     });

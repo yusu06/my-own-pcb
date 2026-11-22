@@ -74,3 +74,43 @@ test("costRequired는 부품함 부품을 기본 부품 원가로 센다(예전�
   expect(r.cost).toBe(4);
   expect(fails(r)).toEqual([]);
 });
+
+const SR_IO = ['s_n:in', 'r_n:in', 'q:out'];
+const latchTask: LogicTask = {
+  ...task,
+  preset: ckt(SR_IO, []),
+  inputs: ['s_n', 'r_n'],
+  outputs: ['q'],
+  expect: [],
+  seq: {
+    steps: [{ s_n: 0, r_n: 1 }, { s_n: 1, r_n: 1 }, { s_n: 1, r_n: 0 }, { s_n: 1, r_n: 1 }],
+    model() {
+      let q: 0 | 1 = 0;
+      return (i) => {
+        if (!i.s_n) q = 1;
+        else if (!i.r_n) q = 0;
+        return { q };
+      };
+    },
+  },
+};
+const SR: Circuit = ckt([...SR_IO, 'n1:nand', 'n2:nand'], ['s_n.y~n1.a', 'n2.y~n1.b', 'r_n.y~n2.a', 'n1.y~n2.b', 'n1.y~q.a']);
+// 기억 없이 q = NOT s_n
+const NO_MEMORY: Circuit = ckt([...SR_IO, 'n1:nand'], ['s_n.y~n1.a', 's_n.y~n1.b', 'n1.y~q.a']);
+
+test('순차 과제는 단계마다 prev를 이어 채점한다', () => {
+  const ok = gradeLogic(SR, latchTask, lib);
+  expect(fails(ok)).toEqual([]);
+  const bad = gradeLogic(NO_MEMORY, latchTask, lib);
+  expect(fails(bad)).toHaveLength(1);
+  const tl = bad.results[0].timeline!;
+  expect(tl.map((r) => r.name)).toEqual(['s_n', 'r_n', 'q']);
+  expect(tl[2].bad!.some(Boolean)).toBe(true);
+  expect(tl[0].values).toEqual([0, 1, 1, 1]);
+});
+
+test('from 이전 단계는 검사하지 않는다', () => {
+  const t: LogicTask = { ...latchTask, seq: { ...latchTask.seq!, steps: [{ s_n: 1, r_n: 1 }, ...latchTask.seq!.steps], from: 1 } };
+  // 첫 단계(전원 직후)는 회로가 어느 값이든 상관없다
+  expect(fails(gradeLogic(SR, t, lib))).toEqual([]);
+});

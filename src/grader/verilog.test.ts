@@ -1,6 +1,7 @@
 import { expect, test } from "vitest";
 import { gradeVerilog } from "./verilog";
 import type { VerilogTask } from "../lessons/types";
+import { clocked } from "../lessons/seq";
 
 const task: VerilogTask = {
   kind: "verilog",
@@ -64,4 +65,49 @@ test("아주 깊게 겹친 식도 크래시 없이 오류로", () => {
   const g = gradeVerilog(code(`  assign y = ${deep};`), task);
   expect(g.passed).toBe(false);
   expect(g.error?.message).toContain("너무 깊게");
+});
+
+const DFF = (body: string) => `module dff(input clk, input d, output reg q);\n${body}\nendmodule`;
+const seqTask: VerilogTask = {
+  kind: "verilog",
+  title: "D 플립플롭",
+  goal: "",
+  hint: "",
+  top: "dff",
+  skeleton: DFF(""),
+  inputs: [{ name: "clk", width: 1 }, { name: "d", width: 1 }],
+  outputs: [{ name: "q", width: 1 }],
+  seq: {
+    steps: clocked([{ d: 1 }, { d: 0 }, { d: 0 }, { d: 1 }]).map((s, k) => (k % 2 === 0 ? { ...s, d: 1 - s.d } : s)),
+    model() {
+      let q = 0;
+      let last = 0;
+      return ({ clk, d }) => {
+        if (clk && !last) q = d;
+        last = clk;
+        return { q };
+      };
+    },
+  },
+  reference: DFF("  always @(posedge clk) q <= d;"),
+  wrong: [],
+};
+
+test("순차 Verilog는 타임라인으로 채점한다", () => {
+  const ok = gradeVerilog(seqTask.reference, seqTask);
+  expect(ok.error).toBeNull();
+  expect(ok.passed).toBe(true);
+  expect(ok.total).toBe(8);
+  expect(ok.timeline!.map((r) => r.name)).toEqual(["clk", "d", "q"]);
+  // 클럭 없이 d를 그대로 내보내면 에지 사이에서 달라진다
+  const bad = gradeVerilog(DFF("  always @(*) q = d;"), seqTask);
+  expect(bad.passed).toBe(false);
+  expect(bad.timeline![2].bad!.some(Boolean)).toBe(true);
+  expect(gradeVerilog(DFF("  always @(posedge clk) q <= d;").replace("input d", "input [1:0] d"), seqTask).error?.message).toContain("1비트");
+});
+
+test("조합 과제에서 posedge를 쓰면 안내 오류", () => {
+  const g = gradeVerilog(code("  always @(posedge a) y <= b;", "input a, input b, output reg y"), task);
+  expect(g.passed).toBe(false);
+  expect(g.error?.message).toContain("순차 회로");
 });

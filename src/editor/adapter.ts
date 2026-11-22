@@ -52,10 +52,14 @@ const BIT_CLASS: Record<string, string> = { 1: "hi", 0: "lo", X: "x" };
 
 /** pressed[in 부품 id] = true면 1 */
 export function logicSim(lib: ChipLib): Sim {
+  // 래치·플립플롭이 기억하도록 직전 넷 값을 다음 계산에 넘긴다. 회로 구조가 바뀌면 버린다.
+  let last: { shape: string; net: Record<string, Bit> } | null = null;
   return {
     frame(c, pressed) {
       const inputs = Object.fromEntries(c.parts.filter((p) => p.kind === "in").map((p) => [p.id, pressed[p.id] ? 1 : 0] as const));
-      const r = simulate(c, inputs, lib);
+      const shape = JSON.stringify([c.parts.map((p) => [p.id, p.kind, p.chip?.name, p.chip?.v]), c.wires]);
+      const r = simulate(c, inputs, lib, last?.shape === shape ? last.net : undefined);
+      last = { shape, net: r.net };
       const bit = (k: string): Bit => r.net[k] ?? "X";
       return {
         part: (p) => {

@@ -82,3 +82,35 @@ test("반가산기·전가산기 기본 부품 (NAND 5개, 9개)", () => {
   expect(nandCost(DEFAULT_CHIPS.fa.circuit, noLib)).toBe(9);
   expect([CHIP_LABEL.ha, CHIP_LABEL.fa]).toEqual(["반가산기", "전가산기"]);
 });
+
+/** 칩을 각본대로 돌리며 직전 넷 값을 이어 간 출력 q 목록 */
+function trace(def: ChipDef, steps: Record<string, 0 | 1>[]): (0 | 1 | "X")[] {
+  let prev: Record<string, 0 | 1 | "X"> | undefined;
+  return steps.map((s) => {
+    const r = simulate(def.circuit, s, noLib, prev);
+    expect(r.oscillating).toBe(false);
+    prev = r.net;
+    return r.out.q;
+  });
+}
+
+test("SR 래치: 0으로 누르면 설정·리셋, 둘 다 1이면 유지", () => {
+  const s = (s_n: 0 | 1, r_n: 0 | 1) => ({ s_n, r_n });
+  expect(trace(DEFAULT_CHIPS.sr, [s(1, 0), s(1, 1), s(0, 1), s(1, 1), s(1, 0), s(1, 1)])).toEqual([0, 0, 1, 1, 0, 0]);
+  expect(nandCost(DEFAULT_CHIPS.sr.circuit, noLib)).toBe(2);
+});
+
+test("D 래치: en=1이면 d를 따라가고 en=0이면 유지", () => {
+  const s = (d: 0 | 1, en: 0 | 1) => ({ d, en });
+  expect(trace(DEFAULT_CHIPS.dlatch, [s(1, 1), s(0, 1), s(0, 0), s(1, 0), s(1, 1), s(1, 0), s(0, 0)])).toEqual([1, 0, 0, 0, 1, 1, 1]);
+  expect(nandCost(DEFAULT_CHIPS.dlatch.circuit, noLib)).toBe(4);
+});
+
+test("D 플립플롭: clk가 0→1일 때만 d를 잡는다", () => {
+  const s = (d: 0 | 1, clk: 0 | 1) => ({ d, clk });
+  // 첫 단계는 전원 직후라 검사하지 않는다. clk=1 동안 d가 바뀌어도, clk가 내려가며 d가 바뀌어도 q는 그대로
+  const q = trace(DEFAULT_CHIPS.dff, [s(1, 0), s(1, 1), s(0, 1), s(0, 0), s(0, 1), s(1, 1), s(0, 0), s(1, 0), s(1, 1)]);
+  expect(q.slice(1)).toEqual([1, 1, 1, 0, 0, 0, 0, 1]);
+  expect(nandCost(DEFAULT_CHIPS.dff.circuit, noLib)).toBe(9);
+  expect(CHIP_LABEL.dff).toBe("D 플립플롭");
+});

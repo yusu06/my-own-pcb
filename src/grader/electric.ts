@@ -18,6 +18,15 @@ export interface LogicRow {
   got: Bit[];
 }
 
+/** 타임라인 한 줄: 신호 하나의 단계별 값. 출력 줄에만 expect·bad */
+export interface TimeRow {
+  name: string;
+  label: string;
+  values: (number | "X")[];
+  expect?: number[];
+  bad?: boolean[];
+}
+
 export interface TruthRow {
   inputs: (0 | 1)[];
   expect: 0 | 1;
@@ -30,6 +39,8 @@ export interface CheckResult {
   rows?: TruthRow[];
   /** 논리 과제 진리표(출력이 여러 개일 수 있다) */
   lrows?: LogicRow[];
+  /** 순차 과제 타임라인 */
+  timeline?: TimeRow[];
 }
 
 const NAME: Partial<Record<PartKind, string>> = { lamp: "전구", led: "LED", resistor: "저항", npn: "트랜지스터", button: "버튼", "button-nc": "버튼", switch: "스위치" };

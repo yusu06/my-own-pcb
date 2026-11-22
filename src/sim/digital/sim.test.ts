@@ -111,3 +111,37 @@ describe("손상된 부품함 방어", () => {
     expect(performance.now() - t0).toBeLessThan(100);
   });
 });
+
+describe('래치(피드백)', () => {
+  const SR = ckt(['s_n:in', 'r_n:in', 'n1:nand', 'n2:nand', 'q:out'], ['s_n.y~n1.a', 'n2.y~n1.b', 'r_n.y~n2.a', 'n1.y~n2.b', 'n1.y~q.a']);
+  const run = (seq: [0 | 1, 0 | 1][]) => {
+    let prev: Record<string, 0 | 1 | 'X'> | undefined;
+    return seq.map(([s_n, r_n]) => {
+      const r = simulate(SR, { s_n, r_n }, noLib, prev);
+      prev = r.net;
+      return r;
+    });
+  };
+
+  test('SR 래치는 설정·유지·리셋된다', () => {
+    const rs = run([[0, 1], [1, 1], [1, 0], [1, 1]]);
+    expect(rs.map((r) => r.out.q)).toEqual([1, 1, 0, 0]);
+    expect(rs.every((r) => !r.oscillating)).toBe(true);
+  });
+
+  test('래치는 prev 없이도 발진하지 않고 자리 잡는다', () => {
+    const r = simulate(SR, { s_n: 1, r_n: 1 }, noLib);
+    expect(r.oscillating).toBe(false);
+    expect([0, 1]).toContain(r.out.q);
+  });
+
+  test('S·R 동시 해제도 멈추지 않는다', () => {
+    const [, r] = run([[0, 0], [1, 1]]);
+    if (!r.oscillating) expect([0, 1]).toContain(r.out.q);
+  });
+
+  test('NOT 하나 고리는 여전히 발진', () => {
+    const c = ckt(['n:nand', 'o:out'], ['n.y~n.a', 'n.y~n.b', 'n.y~o.a']);
+    expect(simulate(c, {}, noLib).oscillating).toBe(true);
+  });
+});
