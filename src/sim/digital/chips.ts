@@ -121,3 +121,11 @@ export function makeLib(box: Record<string, unknown>): ChipLib {
     return def ? { def, fallback: true } : null;
   };
 }
+
+/** 부품함에서 쓸 수 있는 가장 새 버전 번호(손상된 버전은 건너뜀). 없으면 null */
+export function latestValid(box: Record<string, unknown>, name: string): number | null {
+  const versions = box[name];
+  if (!Array.isArray(versions)) return null;
+  for (let v = versions.length - 1; v >= 0; v--) if (validChipDef(versions[v])) return v;
+  return null;
+}

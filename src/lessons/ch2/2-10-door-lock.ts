@@ -29,6 +29,9 @@ const CYCLES = [
   ...typed([2, 2, 5, 1]),
   { rst: 0, press: 0, key: 2 }, { rst: 0, press: 0, key: 5 }, { rst: 0, press: 0, key: 1 },
   ...typed([5, 1, 2, 5, 2, 5, 1]),
+  // 쉬지 않고 이어 누르기: 열린 주기에 누른 2가 새 시작이 된다
+  ...[2, 5, 1, 2, 5, 1].map((key) => ({ rst: 0, press: 1, key })),
+  { rst: 0, press: 0, key: 0 },
 ];
 
 export const lesson: Lesson = {
@@ -94,6 +97,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "unlock", width: 1 }],
       labels: { rst: "리셋", press: "누름", key: "숫자", unlock: "열림" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(CYCLES, ["rst"]),
         model() {
           let s = 0;
@@ -119,6 +123,8 @@ export const lesson: Lesson = {
         REF.replace("S2: state <= (key == 1) ? OPEN : (key == 2) ? S1 : S0;", "S2: state <= (key == 1) ? OPEN : S2;"),
         // press를 보지 않음: 쉬는 주기의 key까지 읽는다
         REF.replace("    else if (press) begin\n", "    else begin\n"),
+        // 열림 직후 누른 2를 버림: 2-5-1-2-5-1을 이어 누르면 두 번째에 안 열림
+        REF.replace("state <= (press && key == 2) ? S1 : S0;", "state <= S0;"),
       ],
       hint: "S0: (key == 2) ? S1 : S0.  S1: (key == 5) ? S2 : (key == 2) ? S1 : S0.  S2: (key == 1) ? OPEN : (key == 2) ? S1 : S0.",
     },

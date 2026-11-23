@@ -83,6 +83,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "vend", width: 1 }, { name: "change", width: 10 }],
       labels: { rst: "리셋", c100: "100원", c500: "500원", vend: "음료", change: "거스름" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(CYCLES, ["rst"]),
         model() {
           let amt = 0;

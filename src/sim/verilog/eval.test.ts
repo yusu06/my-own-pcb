@@ -241,3 +241,35 @@ test("자기 자신을 클럭으로 쓰는 끝없는 연쇄는 오류", () => {
   );
   expect(serr(src, [{ clk: 0 }, { clk: 1 }])).toContain("클럭 연쇄");
 });
+
+test("거꾸로 쓴 긴 조합 사슬(300단)도 루프 오류 없이 계산한다", () => {
+  // 뒤에서부터 쓰면 한 바퀴에 한 단씩만 값이 전해진다
+  const n = 300;
+  const lines = [`  wire ${Array.from({ length: n + 1 }, (_, i) => "t" + i).join(", ")};`, `  assign y = t${n};`];
+  for (let i = n; i >= 1; i--) lines.push(`  assign t${i} = ~t${i - 1};`);
+  lines.push("  assign t0 = a;");
+  expect(run(mod("input a, output y", lines.join("\n")), { a: 1 }).y).toBe(1);
+});
+
+test("인스턴스가 너무 많으면(겹겹이 두 개씩) 멈추지 않고 오류", () => {
+  const t0 = Date.now();
+  // 포트 없는 모듈은 연결(블록)을 만들지 않아서 블록 수 상한에 걸리지 않는다
+  const mods = ["module l0();\nendmodule"];
+  for (let i = 1; i <= 14; i++) mods.push(`module l${i}();\n  l${i - 1} p();\n  l${i - 1} q();\nendmodule`);
+  mods.push("module m(input a, output y);\n  assign y = a;\n  l14 r();\nendmodule");
+  expect(err(mods.join("\n"))).toContain("부품(인스턴스)이 너무 많아요");
+  expect(Date.now() - t0).toBeLessThan(2000);
+});
+
+test("조합 블록이 너무 많으면(루프가 있어도) 오래 멈추지 않고 오류", () => {
+  const t0 = Date.now();
+  // 인스턴스는 수백 개뿐이지만 assign은 1만 개가 넘는다
+  const ws = Array.from({ length: 100 }, (_, i) => "w" + i);
+  const leaf = `module leaf(input a, output y);\n  wire ${ws.join(", ")};\n` + ws.map((w) => `  assign ${w} = ~a;`).join("\n") + "\n  assign y = w99;\nendmodule";
+  const mods = [leaf, "module l0(input a, output y);\n  leaf p(.a(a), .y(y));\nendmodule"];
+  for (let i = 1; i <= 7; i++)
+    mods.push(`module l${i}(input a, output y);\n  wire t;\n  l${i - 1} p(.a(a), .y(t));\n  l${i - 1} q(.a(t), .y(y));\nendmodule`);
+  mods.push("module m(input a, output y);\n  wire x;\n  assign x = ~x;\n  l7 r(.a(a), .y(y));\nendmodule");
+  expect(err(mods.join("\n"))).toContain("회로가 너무 커요");
+  expect(Date.now() - t0).toBeLessThan(2000);
+});

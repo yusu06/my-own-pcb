@@ -26,11 +26,15 @@ export function renderVerilogTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
 
   const results = h("div", { class: "test-results", "aria-live": "polite" });
   const help = h("div", { class: "task-help" });
+  const tooLong = h("p", { class: "warn", role: "status" });
+  tooLong.hidden = true;
 
   const editor = mountCodeEditor({
     value: typeof saved === "string" && saved.length <= MAX_SAVED ? saved : task.skeleton,
     onChange(v) {
       clearTimeout(timer);
+      tooLong.hidden = v.length <= MAX_SAVED;
+      tooLong.textContent = `⚠ 코드가 ${MAX_SAVED.toLocaleString()}자를 넘어서 저장되지 않아요(지금 ${v.length.toLocaleString()}자). 줄이면 다시 저장돼요.`;
       timer = window.setTimeout(() => {
         if (v.length > MAX_SAVED) return;
         ctx.store.data = saveWork(ctx.store.data, key, v);
@@ -147,6 +151,7 @@ export function renderVerilogTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
       "div",
       { class: "editor" },
       editor.el,
+      tooLong,
       h(
         "div",
         { class: "ed-tools" },

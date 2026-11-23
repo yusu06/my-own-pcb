@@ -74,6 +74,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "red", width: 1 }, { name: "yellow", width: 1 }, { name: "green", width: 1 }],
       labels: { rst: "리셋", red: "빨강", yellow: "노랑", green: "초록" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(
           Array.from({ length: 22 }, (_, k) => ({ rst: k === 0 || k === 13 ? 1 : 0 })),
           ["rst"],

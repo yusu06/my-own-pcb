@@ -86,6 +86,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "leds", width: 8 }],
       labels: { rst: "리셋", s: "새 점", leds: "LED" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(
           [{ rst: 1, s: 1 }, ...PATTERN.map((s) => ({ rst: 0, s })), { rst: 1, s: 0 }, { rst: 0, s: 1 }],
           ["rst"],

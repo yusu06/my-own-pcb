@@ -135,6 +135,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "q", width: 1 }],
       labels: { rst: "리셋" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: [
           { clk: 0, rst: 1, d: 1 }, { clk: 1, rst: 1, d: 1 },
           { clk: 0, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 1 }, { clk: 1, rst: 0, d: 0 },

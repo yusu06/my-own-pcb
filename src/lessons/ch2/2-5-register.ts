@@ -96,6 +96,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "q", width: 4 }],
       labels: { rst: "리셋", en: "찍기" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked([
           { rst: 1, en: 0, d: 5 },
           { rst: 0, en: 1, d: 9 },
