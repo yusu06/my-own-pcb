@@ -70,7 +70,7 @@ export const lesson: Lesson = {
     {
       kind: "verilog",
       title: "토이4 해독기",
-      goal: "case (ins[7:4]) 안에 op 0~6마다 켤 신호를 채우세요. 해독 표: LDI → alu_op 0·write_a, ADD → alu_op 1·write_a, SUB → alu_op 2·write_a, OUT → write_out, JMP → jump, JZ → jz, IN → alu_op 0·use_sensor·write_a.",
+      goal: "case (ins[7:4]) 안에 op 0~6마다 켤 신호를 채우세요. 해독 표: LDI → alu_op 0·write_a, ADD → alu_op 1·write_a, SUB → alu_op 2·write_a, OUT → write_out, JMP → jump, JZ → jz, IN → alu_op 0·use_sensor·write_a. 적지 않은 신호는 뼈대 첫 줄의 값(alu_op = 3, 나머지 0) 그대로 두세요.",
       top: "decoder",
       skeleton: HEAD + "      // 4'd0: begin alu_op = 2'd0; write_a = 1; end // LDI\n" + TAIL,
       inputs: [{ name: "ins", width: 8 }],
@@ -93,7 +93,7 @@ export const lesson: Lesson = {
     {
       title: "진짜 명령어 집합도 같은 원리",
       body:
-        "스마트폰의 ARM, 새로 많이 쓰이는 RISC-V 같은 실제 명령어 집합도 ‘연산 코드 + 레지스터 번호 + 숫자’를 정해진 비트 자리에 적는다. 다만 명령어가 16~32비트이고 종류가 수백 개다. " +
+        "스마트폰의 ARM, 새로 많이 쓰이는 RISC-V 같은 실제 명령어 집합도 ‘연산 코드 + 레지스터 번호 + 숫자’를 정해진 비트 자리에 적는다. 다만 명령어가 16~32비트이고 종류도 훨씬 많다(작은 것은 수십 개, 큰 것은 수백 개)." +
         "MCU 데이터시트에 ‘ARM Cortex-M0+ 코어’처럼 적혀 있으면, 그 칩이 어떤 명령어 표를 해독하는지 알려 주는 것이다.",
     },
   ],
