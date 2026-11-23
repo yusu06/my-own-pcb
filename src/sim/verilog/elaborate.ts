@@ -43,6 +43,7 @@ interface Ctx {
   mods: Map<string, ModuleDecl>;
   /** posedge 블록의 논블로킹 대입: 모든 블록을 돈 뒤 한꺼번에 반영 */
   pending: (() => void)[];
+  instances: number;
 }
 type Mode = "assign" | "always" | "inst";
 interface Lhs {
@@ -53,6 +54,8 @@ interface Lhs {
 
 const MAX_PASSES = 200;
 const MAX_DEPTH = 16;
+/** 겹겹이 펼친 인스턴스 수 상한(폰이 멈추지 않게) */
+const MAX_INSTANCES = 2000;
 const fit = (x: number, w: number) => {
   const M = 2 ** w;
   return ((x % M) + M) % M;
@@ -75,7 +78,7 @@ export function compile(src: string, top: string): Design {
     mods.set(m.name, m);
   }
   const topMod = mods.get(top) ?? fail(1, `모듈 ‘${top}’이(가) 없어요. 뼈대 코드의 module ${top} 이름을 바꾸지 마세요.`);
-  const ctx: Ctx = { sigs: [], procs: [], mods, pending: [] };
+  const ctx: Ctx = { sigs: [], procs: [], mods, pending: [], instances: 0 };
   const scope = elabModule(topMod, "", ctx, []);
   const portSig = (name: string) => (scope.get(name) as { s: Sig }).s;
   const inputs = topMod.ports.filter((p) => p.dir === "input").map((p) => ({ name: p.name, width: p.msb - p.lsb + 1 }));
@@ -97,7 +100,8 @@ export function compile(src: string, top: string): Design {
         }
       }
       if (!changed) return;
-      if (pass >= MAX_PASSES)
+      // 순환이 없으면 바퀴마다 적어도 한 단은 자리를 잡으니, 긴 사슬은 그 길이만큼 더 돈다
+      if (pass >= MAX_PASSES + comb.length)
         fail(lastLine, "조합 루프: 신호가 계속 바뀌어서 값이 정해지지 않아요. 출력이 돌고 돌아 자기 자신을 바꾸고 있지 않은지 보세요.");
     }
   };
@@ -180,6 +184,7 @@ function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]):
       const child = ctx.mods.get(it.module) ?? fail(it.line, `모듈 ‘${it.module}’이(가) 없어요. 같은 파일에 module ${it.module} ... endmodule을 써 주세요.`);
       if (stack.includes(child.name) || child.name === mod.name) fail(it.line, `모듈 ‘${child.name}’이(가) 자기 자신을 품고 있어요. 모듈 안에 같은 모듈을 넣을 수 없어요.`);
       if (stack.length >= MAX_DEPTH) fail(it.line, "모듈을 너무 깊게 겹쳐 넣었어요.");
+      if (++ctx.instances > MAX_INSTANCES) fail(it.line, `부품(인스턴스)이 너무 많아요. 모두 펼치면 ${MAX_INSTANCES}개가 넘어요.`);
       if (scope.has(it.name)) fail(it.line, `‘${it.name}’ 이름이 이미 쓰이고 있어요. 인스턴스 이름을 바꿔 주세요.`);
       const seen = new Set<string>();
       for (const c of it.conns) {

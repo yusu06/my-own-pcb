@@ -241,3 +241,22 @@ test("자기 자신을 클럭으로 쓰는 끝없는 연쇄는 오류", () => {
   );
   expect(serr(src, [{ clk: 0 }, { clk: 1 }])).toContain("클럭 연쇄");
 });
+
+test("거꾸로 쓴 긴 조합 사슬(300단)도 루프 오류 없이 계산한다", () => {
+  // 뒤에서부터 쓰면 한 바퀴에 한 단씩만 값이 전해진다
+  const n = 300;
+  const lines = [`  wire ${Array.from({ length: n + 1 }, (_, i) => "t" + i).join(", ")};`, `  assign y = t${n};`];
+  for (let i = n; i >= 1; i--) lines.push(`  assign t${i} = ~t${i - 1};`);
+  lines.push("  assign t0 = a;");
+  expect(run(mod("input a, output y", lines.join("\n")), { a: 1 }).y).toBe(1);
+});
+
+test("인스턴스가 너무 많으면(겹겹이 두 개씩) 멈추지 않고 오류", () => {
+  const t0 = Date.now();
+  const mods = ["module l0(input a, output y);\n  assign y = ~a;\nendmodule"];
+  for (let i = 1; i <= 14; i++)
+    mods.push(`module l${i}(input a, output y);\n  wire t;\n  l${i - 1} p(.a(a), .y(t));\n  l${i - 1} q(.a(t), .y(y));\nendmodule`);
+  mods.push("module m(input a, output y);\n  l14 r(.a(a), .y(y));\nendmodule");
+  expect(err(mods.join("\n"))).toContain("부품(인스턴스)이 너무 많아요");
+  expect(Date.now() - t0).toBeLessThan(2000);
+});
