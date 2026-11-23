@@ -93,6 +93,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "sec", width: 6 }, { name: "done", width: 1 }],
       labels: { rst: "리셋", load: "넣기", sec_in: "넣을 시간", sec: "남은 시간", done: "끝" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(
           [
             { rst: 1, load: 0, sec_in: 0 },

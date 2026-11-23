@@ -109,6 +109,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "heat", width: 1 }, { name: "beep", width: 1 }, { name: "sec", width: 8 }],
       labels: { rst: "리셋", add: "+30초", start: "시작", door: "문 열림", heat: "가열", beep: "삐", sec: "남은 초" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(CYCLES, ["rst"]),
         model() {
           let s = 0;

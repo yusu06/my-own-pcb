@@ -100,6 +100,7 @@ export const lesson: Lesson = {
       outputs: [{ name: "tick", width: 1 }],
       labels: { rst: "리셋", tick: "째깍" },
       seq: {
+        from: 1, // 리셋 에지 전(값이 아직 정해지지 않음)은 채점하지 않는다
         steps: clocked(
           Array.from({ length: CYCLES }, (_, k) => ({ rst: k === 0 ? 1 : 0 })),
           ["rst"],

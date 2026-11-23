@@ -60,6 +60,12 @@ describe.each(verilogTasks)("%s (Verilog)", (_name, t) => {
       expect(gradeVerilog(asyncRef, t).passed).toBe(true);
     });
   }
+  if (t.seq && t.seq.steps.slice(0, 2).some((s) => s.rst === 1)) {
+    test("리셋 전 첫 단계(clk = 0)는 채점하지 않는다", () => {
+      // 첫 에지 전에는 레지스터 값이 정해지지 않았다. 상태 번호를 다르게 정한 답이 그 칸만 틀리면 안 된다
+      expect(t.seq!.from ?? 0).toBeGreaterThanOrEqual(1);
+    });
+  }
   test("입력·기대값이 포트 너비 안에 있다", () => {
     if (t.seq) {
       const m = t.seq.model();
