@@ -6,7 +6,7 @@ import { gradeLogic } from "../grader/logic";
 import type { CircuitTask, Lesson } from "../lessons/types";
 import { markTaskDone, recordCost, saveChip, saveWork } from "../progress";
 import { renderRich } from "../rich";
-import { CHIP_LABEL, makeLib } from "../sim/digital/chips";
+import { CHIP_LABEL, latestValid, makeLib } from "../sim/digital/chips";
 import { SWITCH_KINDS } from "../sim/electric/parts";
 import type { ChipRef, Circuit } from "../sim/electric/types";
 import type { Ctx } from "./app";
@@ -28,12 +28,12 @@ export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
   const results = h("div", { class: "test-results", "aria-live": "polite" });
   const help = h("div", { class: "task-help" });
 
-  /** 부품함 최신 버전, 없으면 기본 부품 */
+  /** 부품함의 성한 최신 버전, 없으면 기본 부품 */
   const chipRef = (name: string): ChipRef | null => {
-    const versions = ctx.store.data.chips[name] ?? [];
-    const found = lib()({ name, v: versions.length ? versions.length - 1 : null, inputs: [], outputs: [] });
+    const v = latestValid(ctx.store.data.chips, name);
+    const found = lib()({ name, v, inputs: [], outputs: [] });
     if (!found) return null;
-    return { name, v: found.fallback ? null : versions.length - 1, inputs: [...found.def.inputs], outputs: [...found.def.outputs] };
+    return { name, v: found.fallback ? null : v, inputs: [...found.def.inputs], outputs: [...found.def.outputs] };
   };
 
   function grade(c: Circuit): { rs: CheckResult[]; notes: string[] } {

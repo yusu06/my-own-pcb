@@ -1,7 +1,7 @@
 import { expect, test } from "vitest";
 import { ckt } from "../electric/ckt";
 import type { ChipRef, Circuit } from "../electric/types";
-import { CHIP_LABEL, DEFAULT_CHIPS, makeLib, validChipDef } from "./chips";
+import { CHIP_LABEL, DEFAULT_CHIPS, latestValid, makeLib, validChipDef } from "./chips";
 import { nandCost, simulate, type ChipDef } from "./sim";
 
 const noLib = () => null;
@@ -118,4 +118,12 @@ test("D 플립플롭: clk가 0→1일 때만 d를 잡는다", () => {
 test("기본 D 플립플롭이 든 칩 정의도 유효하다", () => {
   const def = { inputs: ["d", "clk"], outputs: ["q"], circuit: ckt(["d:in", "clk:in", "f:dff", "q:out"], ["d.y~f.d", "clk.y~f.clk", "f.q~q.a"]) };
   expect(validChipDef(def)).toBe(true);
+});
+
+test("latestValid: 손상된 최신 버전은 건너뛰고 그 앞의 성한 버전을 고른다", () => {
+  expect(latestValid({ and: [myAnd, { broken: true }] }, "and")).toBe(0);
+  expect(latestValid({ and: [myAnd, myAnd] }, "and")).toBe(1);
+  expect(latestValid({ and: [{ broken: true }] }, "and")).toBeNull();
+  expect(latestValid({}, "and")).toBeNull();
+  expect(latestValid({ and: "nope" }, "and")).toBeNull();
 });
