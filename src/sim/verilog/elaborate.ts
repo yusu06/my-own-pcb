@@ -56,6 +56,10 @@ const MAX_PASSES = 200;
 const MAX_DEPTH = 16;
 /** 겹겹이 펼친 인스턴스 수 상한(폰이 멈추지 않게) */
 const MAX_INSTANCES = 2000;
+/** 펼친 뒤 assign·always·포트 연결 수 상한. 루프가 있으면 settle 한 번이 (바퀴 수 × 이 수)만큼 돈다 */
+const MAX_PROCS = 3000;
+/** settle 한 번에 블록을 실행하는 총 횟수 상한(폰에서 1초 안팎) */
+const MAX_WORK = 2_000_000;
 const fit = (x: number, w: number) => {
   const M = 2 ** w;
   return ((x % M) + M) % M;
@@ -101,7 +105,7 @@ export function compile(src: string, top: string): Design {
       }
       if (!changed) return;
       // 순환이 없으면 바퀴마다 적어도 한 단은 자리를 잡으니, 긴 사슬은 그 길이만큼 더 돈다
-      if (pass >= MAX_PASSES + comb.length)
+      if (pass >= Math.min(MAX_PASSES + comb.length, Math.max(MAX_PASSES, MAX_WORK / comb.length)))
         fail(lastLine, "조합 루프: 신호가 계속 바뀌어서 값이 정해지지 않아요. 출력이 돌고 돌아 자기 자신을 바꾸고 있지 않은지 보세요.");
     }
   };
@@ -158,6 +162,7 @@ function elabModule(mod: ModuleDecl, prefix: string, ctx: Ctx, stack: string[]):
 
   const ex = new ExprCompiler(scope, ctx.pending);
   const addProc = (line: number, lhsList: Lhs[], run: (v: number[]) => void, edges?: number[]) => {
+    if (ctx.procs.length >= MAX_PROCS) fail(line, `회로가 너무 커요. 모두 펼치면 assign·always·연결이 ${MAX_PROCS}개가 넘어요.`);
     // 같은 비트에 값을 넣는 곳이 둘 이상이면 오류
     const own = new Map<Sig, number>();
     for (const l of lhsList) for (const b of l.bits) own.set(b.s, (own.get(b.s) ?? 0) | b.mask);
