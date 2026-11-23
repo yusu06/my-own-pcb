@@ -69,6 +69,16 @@ test.each([
   expect(got.slice(1)).toEqual(want.slice(1));
 });
 
+test("3-6 모델은 구간마다 마지막 4주기만 out을 채점하고 pc는 채점하지 않는다", async () => {
+  const { lesson } = await import("./3-6-robot");
+  const t = lesson.tasks[0];
+  if (t.kind !== "verilog" || !t.seq) throw new Error("3-6 과제는 순차 Verilog");
+  const m = t.seq.model();
+  const outs = t.seq.steps.map((s) => m(s));
+  expect(outs.filter((o) => o.out !== undefined)).toHaveLength(6 * 4 * 2);
+  expect(outs.every((o) => o.pc === undefined)).toBe(true);
+});
+
 test("{IN, 4'd0}는 8비트 0x60", () => {
   const d = compile(`module t(output [7:0] y);\n${TOY4_PARAMS}  assign y = {IN, 4'd0};\nendmodule\n`, "t");
   expect(d.run({}).y).toBe(0x60);
