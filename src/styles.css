@@ -324,6 +324,7 @@ table.truth tr.wrong td { background: color-mix(in srgb, var(--bad) 18%, transpa
 .tl-head .tl-cell { color: var(--muted); font-size: 0.75rem; }
 .tl-cell.v1 { background: color-mix(in srgb, var(--accent) 22%, transparent); }
 .tl-cell.vX { color: var(--bad); }
+.tl-cell.dc { opacity: 0.45; }
 .tl-out .tl-name { font-weight: 600; }
 .tl-cell.bad { background: color-mix(in srgb, var(--bad) 30%, transparent); outline: 1px solid var(--bad); font-weight: 600; }
 .tl-note { color: var(--muted); font-size: 0.8rem; margin: 0.4rem 0 0; }

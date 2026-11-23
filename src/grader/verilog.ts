@@ -62,11 +62,13 @@ export function gradeVerilog(src: string, task: VerilogTask): VerilogGrade {
         ...task.outputs.map((p) => {
           const values = got.map((o) => o[p.name]);
           const expect = want.map((o) => o[p.name]);
-          return { name: p.name, label: label(p.name), values, expect, bad: values.map((v, k) => k >= from && v !== expect[k]) };
+          return { name: p.name, label: label(p.name), values, expect, bad: values.map((v, k) => k >= from && expect[k] !== undefined && v !== expect[k]) };
         }),
       ];
       const passed = timeline.every((r) => !r.bad?.some(Boolean));
-      return { error: null, rows: [], total: steps.length - from, passed, timeline };
+      // 기대값이 하나라도 정해진 단계만 센다(모델이 undefined로 둔 칸은 상관없음)
+      const total = want.filter((o, k) => k >= from && task.outputs.some((p) => o[p.name] !== undefined)).length;
+      return { error: null, rows: [], total, passed, timeline };
     }
 
     if (d.seqLine !== null) return bad(new VerilogError(d.seqLine, "순차 회로(posedge)는 2장에서 배워요. 이 과제는 always @(*)나 assign으로 써요."));

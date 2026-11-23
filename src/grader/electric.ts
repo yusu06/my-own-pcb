@@ -23,7 +23,8 @@ export interface TimeRow {
   name: string;
   label: string;
   values: (number | "X")[];
-  expect?: number[];
+  /** undefined = 채점하지 않는 칸(상관없음) */
+  expect?: (number | undefined)[];
   bad?: boolean[];
 }
 

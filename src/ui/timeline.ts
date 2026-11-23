@@ -10,6 +10,23 @@ export function timelineWindow(rows: TimeRow[], max = 48): { start: number; end:
   return { start, end: start + max };
 }
 
+/** 칸 하나의 모양. 출력 줄에서 기대값이 undefined인 칸은 채점하지 않는 ‘상관없음’ */
+export function cellInfo(
+  v: number | "X",
+  expect: (number | undefined)[] | undefined,
+  k: number,
+  bad: boolean,
+  isOut: boolean,
+): { cls: string; title: string; text: string } {
+  const want = expect?.[k];
+  const dc = isOut && want === undefined;
+  return {
+    cls: `tl-cell v${v}` + (bad ? " bad" : "") + (dc ? " dc" : ""),
+    title: !isOut ? "" : dc ? "상관없음" : `기대 ${want}`,
+    text: bad ? `${v}→${want}` : String(v),
+  };
+}
+
 /** 신호 × 단계 표. 출력 줄의 틀린 칸은 빨갛게 "받은→기대"로 보여 준다 */
 export function renderTimeline(rows: TimeRow[]): HTMLElement {
   const n = rows[0]?.values.length ?? 0;
@@ -27,13 +44,8 @@ export function renderTimeline(rows: TimeRow[]): HTMLElement {
       { class: "tl-row" + (r.expect ? " tl-out" : ""), role: "row" },
       h("span", { class: "tl-name" }, r.label),
       ...idx.map((k) => {
-        const v = r.values[k];
-        const bad = r.bad?.[k] ?? false;
-        return h(
-          "span",
-          { class: `tl-cell v${v}` + (bad ? " bad" : ""), title: r.expect ? `기대 ${r.expect[k]}` : "" },
-          bad ? `${v}→${r.expect![k]}` : String(v),
-        );
+        const c = cellInfo(r.values[k], r.expect, k, r.bad?.[k] ?? false, !!r.expect);
+        return h("span", { class: c.cls, title: c.title }, c.text);
       }),
     );
   const note = end - start < n ? h("p", { class: "tl-note" }, `단계 ${start + 1}~${end} / 전체 ${n}`) : null;

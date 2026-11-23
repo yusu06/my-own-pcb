@@ -111,3 +111,28 @@ test("조합 과제에서 posedge를 쓰면 안내 오류", () => {
   expect(g.passed).toBe(false);
   expect(g.error?.message).toContain("순차 회로");
 });
+
+test("모델이 undefined를 준 칸은 채점하지 않고 total에서도 뺀다", () => {
+  const src = "module z(input clk, output reg y);\n  always @(posedge clk) y <= 0;\nendmodule";
+  const mk = (late: number): VerilogTask => ({
+    ...task,
+    top: "z",
+    skeleton: src,
+    reference: src,
+    inputs: [{ name: "clk", width: 1 }],
+    outputs: [{ name: "y", width: 1 }],
+    spec: undefined,
+    seq: {
+      steps: clocked(Array.from({ length: 6 }, () => ({}))),
+      model() {
+        let k = 0;
+        return () => (k++ < 8 ? { y: undefined as unknown as number } : { y: late });
+      },
+    },
+  });
+  const ok = gradeVerilog(src, mk(0));
+  expect(ok.error).toBeNull();
+  expect(ok.passed).toBe(true);
+  expect(ok.total).toBe(4);
+  expect(gradeVerilog(src, mk(1)).passed).toBe(false);
+});
