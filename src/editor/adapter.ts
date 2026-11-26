@@ -1,6 +1,7 @@
 import { simulate, type Bit, type ChipLib } from "../sim/digital/sim";
 import { solve } from "../sim/electric/solve";
-import type { Circuit, Part, PinRef, Pressed, Wire } from "../sim/electric/types";
+import { sensorR } from "../sim/electric/parts";
+import type { Circuit, Part, PinRef, Pressed, Settings, Wire } from "../sim/electric/types";
 import { partSymbol } from "./symbols";
 
 /** 한 번 계산한 회로 상태를 화면에 그리는 데 필요한 것들 */
@@ -15,7 +16,8 @@ export interface Frame {
 
 /** 전기/논리 회로를 편집기에 붙이는 어댑터 */
 export interface Sim {
-  frame(c: Circuit, pressed: Pressed): Frame;
+  /** settings = 실험 모드의 손잡이·밝기·온도(전기 회로만 씀) */
+  frame(c: Circuit, pressed: Pressed, settings?: Settings): Frame;
   /** 실험 모드: 누르는 동안만 켜지는 부품 */
   hold(p: Part): boolean;
   /** 실험 모드: 탭하면 켜짐/꺼짐이 바뀌는 부품 */
@@ -24,10 +26,16 @@ export interface Sim {
 }
 
 const mA = (a: number) => `${(a * 1000).toFixed(1)} mA`;
+const kOhm = (r: number) => (r >= 1000 ? `${(r / 1000).toFixed(1)} kΩ` : `${r.toFixed(0)} Ω`);
+
+/** 회로에 있는 센서에 맞는 환경 슬라이더 */
+export function envKeys(c: Circuit): ("light" | "temp")[] {
+  return [...(c.parts.some((p) => p.kind === "ldr") ? ["light" as const] : []), ...(c.parts.some((p) => p.kind === "ntc") ? ["temp" as const] : [])];
+}
 
 export const electricSim: Sim = {
-  frame(c, pressed) {
-    const sol = solve(c, pressed);
+  frame(c, pressed, settings = {}) {
+    const sol = solve(c, pressed, settings);
     return {
       part: (p, down) => partSymbol(p, sol.parts[p.id], down),
       wireClass: (w) => ((sol.parts[w.a.part]?.current ?? 0) >= 0.001 && (sol.parts[w.b.part]?.current ?? 0) >= 0.001 ? "flow" : ""),
@@ -40,7 +48,14 @@ export const electricSim: Sim = {
               ? "⚠ 회로 계산이 불안정해요."
               : null,
       pinTip: (pin) => (sol.floating[`${pin.part}.${pin.pin}`] ? "? V (정해지지 않음)" : `${(sol.nodeV[`${pin.part}.${pin.pin}`] ?? 0).toFixed(2)} V`),
-      partTip: (p) => (p.kind === "button" || p.kind === "button-nc" || p.kind === "switch" ? null : mA(sol.parts[p.id]?.current ?? 0)),
+      partTip: (p) =>
+        p.kind === "button" || p.kind === "button-nc" || p.kind === "switch" || p.kind === "probe"
+          ? null
+          : p.kind === "pot"
+            ? `손잡이 ${Math.round((settings[p.id] ?? 0.5) * 100)}%`
+            : p.kind === "ldr" || p.kind === "ntc"
+              ? `${kOhm(sensorR(p, settings))}, ${mA(sol.parts[p.id]?.current ?? 0)}`
+              : mA(sol.parts[p.id]?.current ?? 0),
     };
   },
   hold: (p) => p.kind === "button" || p.kind === "button-nc",

@@ -60,6 +60,32 @@ function body(p: Part, r: PartResult | undefined, pressed: boolean): SVGElement[
         line(-40, 0, -6, 0), line(-6, -14, -6, 14, "thick"),
         path("M -6 -6 L 20 -24 L 20 -40"), path("M -6 6 L 20 24 L 20 40"), path("M 12 15 L 20 24 L 9 23", "arrow"),
       ];
+    case "pot":
+      // 저항 + 아래에서 올라와 지그재그를 가리키는 손잡이(w)
+      return [
+        line(-40, 0, -24, 0), path("M -24 0 L -20 -8 L -12 8 L -4 -8 L 4 8 L 12 -8 L 20 8 L 24 0"), line(24, 0, 40, 0),
+        line(0, 40, 0, 12), path("M -5 18 L 0 10 L 5 18", "arrow"),
+      ];
+    case "ldr":
+      // 저항을 둘러싼 원 + 들어오는 빛 화살표 둘
+      return [
+        line(-40, 0, -24, 0), path("M -24 0 L -20 -8 L -12 8 L -4 -8 L 4 8 L 12 -8 L 20 8 L 24 0"), line(24, 0, 40, 0),
+        svg("circle", { cx: 0, cy: 0, r: 28, class: "case" }),
+        path("M -22 -34 l 10 10 M -12 -24 l -6 0 M -12 -24 l 0 -6 M -10 -40 l 10 10 M 0 -30 l -6 0 M 0 -30 l 0 -6", "rays"),
+      ];
+    case "ntc":
+      // 저항 + 비스듬한 선(값이 온도로 바뀜) + "−t°"
+      return [
+        line(-40, 0, -24, 0), path("M -24 0 L -20 -8 L -12 8 L -4 -8 L 4 8 L 12 -8 L 20 8 L 24 0"), line(24, 0, 40, 0),
+        path("M -20 16 L 20 -16 L 28 -16"),
+        Object.assign(svg("text", { x: 22, y: -22, class: "pol" }), { textContent: "−t°" }),
+      ];
+    case "probe":
+      // MCU 입력 핀: 전류가 흐르지 않는 측정점
+      return [
+        svg("rect", { x: -16, y: -12, width: 32, height: 24, rx: 4, class: "case" }),
+        Object.assign(svg("text", { x: 0, y: 5, class: "pol", "text-anchor": "middle" }), { textContent: "IN" }),
+      ];
     default:
       return [];
   }

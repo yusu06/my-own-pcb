@@ -238,6 +238,10 @@ svg.circuit .chip-pin { font-size: 9px; fill: var(--muted); }
 svg.circuit .fallback .gate { stroke: var(--muted); stroke-dasharray: 3 3; }
 svg.circuit .fallback .chip-name { fill: var(--muted); }
 .ed-status { font-size: 0.9rem; color: var(--muted); min-height: 1.4em; }
+.ed-knobs { display: flex; flex-wrap: wrap; gap: 0.25rem 1rem; }
+.ed-knobs .knob { display: flex; align-items: center; gap: 0.5rem; flex: 1 1 14rem; min-height: 44px; font-size: 0.9rem; }
+.ed-knobs input[type="range"] { flex: 1; min-width: 6rem; accent-color: var(--accent); }
+.ed-knobs output { min-width: 3.5em; text-align: right; font-variant-numeric: tabular-nums; }
 .ed-status.bad { color: var(--bad); font-weight: 600; }
 .ed-palette { display: flex; flex-wrap: wrap; gap: 8px; }
 .ed-palette .btn { min-height: 44px; padding: 0 14px; }

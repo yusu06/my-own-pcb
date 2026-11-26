@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { logicSim } from "./adapter";
+import { envKeys, logicSim } from "./adapter";
 import { makeLib } from "../sim/digital/chips";
 import { ckt } from "../sim/electric/ckt";
 
@@ -21,4 +21,10 @@ test("회로 구조가 바뀌면 이전 상태를 버린다", () => {
   // 선 하나를 지웠다 다시 이은 회로처럼 모양이 다르면 처음 상태와 같아야 한다
   const moved = { ...SR, parts: SR.parts.map((p) => (p.id === "n2" ? { ...p, id: "n2" } : p)), wires: SR.wires.slice().reverse() };
   expect(q(sim, moved, { s_n: true, r_n: true })).toBe(fresh);
+});
+
+test("envKeys: 회로에 있는 센서에 맞는 슬라이더만", () => {
+  expect(envKeys(ckt(["bat:battery", "ldr:ldr"], []))).toEqual(["light"]);
+  expect(envKeys(ckt(["n:ntc", "l:ldr"], []))).toEqual(["light", "temp"]);
+  expect(envKeys(ckt(["bat:battery", "r:resistor"], []))).toEqual([]);
 });

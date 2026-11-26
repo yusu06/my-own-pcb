@@ -1,7 +1,7 @@
 import type { CircuitTask, PaletteItem } from "../lessons/types";
 import { pinNames } from "../sim/electric/parts";
-import type { ChipRef, Circuit, Part, PinRef, Pressed } from "../sim/electric/types";
-import type { Frame, Sim } from "./adapter";
+import type { ChipRef, Circuit, Part, PinRef, Pressed, Settings } from "../sim/electric/types";
+import { envKeys, type Frame, type Sim } from "./adapter";
 import { h } from "../ui/dom";
 import { GRID, outward, pinPos, pointsPath, snap, spotFree, wireRoute } from "./geometry";
 import { attachGestures, type Pt } from "./input";
@@ -22,6 +22,7 @@ const WIRE_HIT_PX = 10;
 const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
   led: { a: "+", k: "−" },
   npn: { b: "B", c: "C", e: "E" },
+  pot: { w: "손잡이" },
 };
 export function mountEditor(opts: {
   task: CircuitTask;
@@ -47,6 +48,7 @@ export function mountEditor(opts: {
   let selWire = -1; // 한 번 탭해서 선택한 선 (한 번 더 탭하면 삭제)
   let mode: "edit" | "run" = "edit";
   let pressed: Pressed = {};
+  let settings: Settings = {}; // 실험 모드의 손잡이·밝기·온도(저장하지 않는다)
   let view = { s: 1, tx: 0, ty: 0 };
   let drag: { id: string; dx: number; dy: number; pos: Pt } | null = null;
   let held: string | null = null; // 실험 모드에서 누르고 있는 버튼
@@ -69,7 +71,8 @@ export function mountEditor(opts: {
   );
   const canvasBox = h("div", { class: "ed-canvas" });
   canvasBox.append(canvas);
-  const el = h("div", { class: "editor" }, h("div", { class: "segmented ed-mode" }, ...modeBtns), canvasBox, status, palette, tools);
+  const knobs = h("div", { class: "ed-knobs" });
+  const el = h("div", { class: "editor" }, h("div", { class: "segmented ed-mode" }, ...modeBtns), knobs, canvasBox, status, palette, tools);
 
   // ---------- 좌표 ----------
   const toWorld = (p: Pt): Pt => ({ x: (p.x - view.tx) / view.s, y: (p.y - view.ty) / view.s });
@@ -190,7 +193,8 @@ export function mountEditor(opts: {
   // ---------- 그리기 ----------
   function render() {
     const c = shown();
-    const fr = sim.frame(c, pressed);
+    const fr = sim.frame(c, pressed, settings);
+    drawKnobs();
     world.setAttribute("transform", `translate(${view.tx} ${view.ty}) scale(${view.s})`);
     world.replaceChildren();
     c.wires.forEach((wr, i) => {
@@ -254,7 +258,37 @@ export function mountEditor(opts: {
     palette.hidden = mode !== "edit" || left.length === 0;
     lastFrame = fr;
   }
-  let lastFrame: Frame = sim.frame(st.circuit, pressed);
+  let lastFrame: Frame = sim.frame(st.circuit, pressed, settings);
+
+  // ---------- 손잡이·센서 슬라이더 (실험 모드) ----------
+  // 끄는 동안 다시 만들면 손가락이 슬라이더를 놓치니, 보일 슬라이더 목록이 바뀔 때만 다시 만든다
+  let knobKey = "";
+  function drawKnobs() {
+    const pots = st.circuit.parts.filter((p) => p.kind === "pot");
+    const env = envKeys(st.circuit);
+    const key = mode === "run" ? JSON.stringify([pots.map((p) => p.id), env]) : "";
+    if (key === knobKey) return;
+    knobKey = key;
+    const slider = (id: string, label: string, max: number, value: number, unit: string, scale: number) => {
+      const out = h("output", {}, `${value}${unit}`);
+      const input = h("input", { type: "range", min: "0", max: String(max), value: String(value), "data-knob": id, "aria-label": label }) as HTMLInputElement;
+      input.oninput = () => {
+        out.textContent = `${input.value}${unit}`;
+        settings = { ...settings, [id]: Number(input.value) / scale };
+        render();
+      };
+      return h("label", { class: "knob" }, h("span", {}, label), input, out);
+    };
+    knobs.replaceChildren(
+      ...(mode === "run"
+        ? [
+            ...pots.map((p) => slider(p.id, `${labelOf(p) || "가변저항"} 손잡이`, 100, Math.round((settings[p.id] ?? 0.5) * 100), "%", 100)),
+            ...env.map((k) => (k === "light" ? slider("light", "밝기", 100, settings.light ?? 50, "", 1) : slider("temp", "온도", 50, settings.temp ?? 25, " °C", 1))),
+          ]
+        : []),
+    );
+    knobs.hidden = knobs.childElementCount === 0;
+  }
 
   // ---------- 처음 화면: 모든 부품이 보이게 ----------
   function fit() {
@@ -297,6 +331,7 @@ export function mountEditor(opts: {
           return render();
         }
         if (pin) return showTip(p, lastFrame.pinTip(pin));
+        if (part?.kind === "pot") (knobs.querySelector(`[data-knob="${part.id}"]`) as HTMLInputElement | null)?.focus();
         const tip = part && !sim.hold(part) ? lastFrame.partTip(part) : null;
         if (tip) showTip(p, tip);
         return;
