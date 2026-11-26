@@ -50,7 +50,7 @@ export const lesson: Lesson = {
       preset: ckt(["bat:battery:3"], []),
       checks: [
         { kind: "truth", inputs: ["a", "b"], output: "led", expect: [0, 0, 0, 1] },
-        { kind: "current", part: "led", min: 0.005, max: 0.02, when: { a: true, b: true } },
+        { kind: "current", part: "led", min: 0.005, max: 0.02, when: { pressed: { a: true, b: true } } },
         { kind: "noBurn" },
         { kind: "noShort" },
       ],

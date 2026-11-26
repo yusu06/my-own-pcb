@@ -67,3 +67,42 @@ test("트랜지스터 회로가 수렴하지 않으면 이미터 연결을 알�
   expect(r.ok).toBe(false);
   expect(r.message).toContain("이미터");
 });
+
+const pull = (withR: boolean) =>
+  ckt(
+    ["bat:battery", "btn:button", "in:probe", ...(withR ? ["r:resistor:10000"] : [])],
+    ["in.p~btn.a", "btn.b~bat.-", ...(withR ? ["r.a~bat.+", "r.b~in.p"] : [])],
+  );
+const HIGH: ElectricCheck = { kind: "voltage", at: { part: "in", pin: "p" }, min: 2.7, max: 3, when: {} };
+
+test("voltage: 범위 안이면 통과, 떠 있으면 실패", () => {
+  expect(gradeElectric(pull(true), [HIGH], ["btn"])[0].ok).toBe(true);
+  const low = gradeElectric(pull(true), [{ ...HIGH, when: { pressed: { btn: true } } }], ["btn"])[0];
+  expect(low.ok).toBe(false);
+  expect(low.message).toContain("측정 핀 전압이");
+  const f = gradeElectric(pull(false), [HIGH], ["btn"])[0];
+  expect(f.ok).toBe(false);
+  expect(f.message).toContain("정해지지 않았어요");
+});
+
+// 광센서(위)·10k(아래) 분압이 베이스를 직접 몬다: 밝으면 베이스가 높아 켜진다
+const lightOn = ckt(
+  ["bat:battery", "ldr:ldr", "rb:resistor:10000", "q:npn", "rl:resistor:100", "led:led"],
+  ["bat.+~ldr.a", "ldr.b~q.b", "q.b~rb.a", "rb.b~bat.-", "bat.+~rl.a", "rl.b~led.a", "led.k~q.c", "q.e~bat.-"],
+);
+
+test("state: 밝기마다 켜짐·꺼짐을 본다", () => {
+  const on = (light: number, want: boolean): ElectricCheck => ({ kind: "state", part: "led", on: want, when: { settings: { light } } });
+  expect(gradeElectric(lightOn, [on(90, true), on(10, false)], []).map((r) => r.ok)).toEqual([true, true]);
+  const bad = gradeElectric(lightOn, [on(10, true)], [])[0];
+  expect(bad.ok).toBe(false);
+  expect(bad.message).toContain("밝기 10");
+});
+
+test("noBurn은 손잡이 끝값까지 훑는다", () => {
+  // 손잡이 0이면 a–w = 1 Ω → LED 탐. 기본 0.5(5 kΩ)만 보면 놓친다
+  const bare = ckt(["bat:battery", "pot:pot", "led:led"], ["bat.+~pot.a", "pot.w~led.a", "led.k~bat.-"]);
+  expect(gradeElectric(bare, [{ kind: "noBurn" }], [])[0].ok).toBe(false);
+  const safe = ckt(["bat:battery", "pot:pot", "r:resistor:100", "led:led"], ["bat.+~pot.a", "pot.w~r.a", "r.b~led.a", "led.k~bat.-"]);
+  expect(gradeElectric(safe, [{ kind: "noBurn" }], [])[0].ok).toBe(true);
+});
