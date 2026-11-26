@@ -17,6 +17,8 @@ export interface Solution {
   parts: Record<string, PartResult>;
   short: boolean;
   converged: boolean;
+  /** 키 = pinKey. 지금 전도하는 부품으로 전지 단자에 닿지 못하면 true(전압이 정해지지 않음) */
+  floating: Record<string, boolean>;
 }
 
 /** 다이오드형 접합: LED(a→k) 또는 npn의 B→E */
@@ -41,7 +43,7 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
   const nodeV: Record<string, number> = Object.fromEntries([...netOf.keys()].map((k) => [k, 0]));
   const parts: Record<string, PartResult> = Object.fromEntries(c.parts.map((p) => [p.id, { ...OFF }]));
   const firstBat = c.parts.find((p) => p.kind === "battery");
-  if (!firstBat) return { nodeV, parts, short: false, converged: true };
+  if (!firstBat) return { nodeV, parts, short: false, converged: true, floating: Object.fromEntries([...netOf.keys()].map((k) => [k, true])) };
 
   const ground = net(firstBat, "-");
   const idx = new Map<number, number>();
@@ -134,6 +136,24 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
 
   for (const [key, k] of netOf) nodeV[key] = vNet(k);
 
+  // 떠 있는 점: 지금 전도하는 부품만 따라 전지 단자에서 닿지 못하는 넷
+  const adj = new Map<number, number[]>();
+  const link = (a: number, b: number) => {
+    adj.set(a, [...(adj.get(a) ?? []), b]);
+    adj.set(b, [...(adj.get(b) ?? []), a]);
+  };
+  const seed: number[] = [];
+  for (const p of c.parts) {
+    if (p.kind === "battery") seed.push(net(p, "+"), net(p, "-"));
+    else if (p.kind === "resistor" || p.kind === "lamp" || p.kind === "ldr" || p.kind === "ntc" || (isSwitch(p) && isClosed(p, pressed))) link(net(p, "a"), net(p, "b"));
+    else if (p.kind === "pot") (link(net(p, "a"), net(p, "w")), link(net(p, "w"), net(p, "b")));
+    else if (p.kind === "npn" && ceOn.get(p.id)) link(net(p, "c"), net(p, "e"));
+  }
+  for (const j of junctions) if (jOn.get(j)) link(net(j.part, j.a), net(j.part, j.k));
+  const reached = new Set(seed);
+  for (const queue = [...seed]; queue.length; ) for (const b of adj.get(queue.pop()!) ?? []) if (!reached.has(b)) (reached.add(b), queue.push(b));
+  const floating: Record<string, boolean> = Object.fromEntries([...netOf].map(([key, k]) => [key, !reached.has(k)]));
+
   let short = false;
   for (const p of c.parts) {
     const r = parts[p.id];
@@ -161,5 +181,5 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
     r.on = r.current >= C.LED_ON && !r.burnt;
     r.brightness = r.on ? Math.min(r.current / C.LED_FULL, 1) : 0;
   }
-  return { nodeV, parts, short, converged };
+  return { nodeV, parts, short, converged, floating };
 }

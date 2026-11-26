@@ -154,3 +154,26 @@ describe("조작 부품 (4장)", () => {
     close(solve(c, {}).nodeV["adc.p"], 1.5, 0.01);
   });
 });
+
+describe("떠 있는 점", () => {
+  test("열린 버튼 뒤의 측정 핀은 떠 있고, 풀업 저항이 있으면 아니다", () => {
+    const bare = ckt(["bat:battery", "btn:button", "in:probe"], ["in.p~btn.a", "btn.b~bat.-"]);
+    expect(solve(bare, {}).floating["in.p"]).toBe(true);
+    const pressed = solve(bare, { btn: true });
+    expect(pressed.floating["in.p"]).toBe(false);
+    close(pressed.nodeV["in.p"], 0, 0.01);
+    const pullUp = ckt(["bat:battery", "btn:button", "in:probe", "r:resistor:10000"], ["in.p~btn.a", "btn.b~bat.-", "r.a~bat.+", "r.b~in.p"]);
+    const s = solve(pullUp, {});
+    expect(s.floating["in.p"]).toBe(false);
+    close(s.nodeV["in.p"], 3, 0.01);
+    expect(s.floating["bat.+"]).toBe(false);
+  });
+
+  test("꺼진 LED 너머의 넷은 떠 있다", () => {
+    // LED를 거꾸로: 켜지지 않으니 LED와 저항 사이 넷은 어느 전지 단자에도 전도로 닿지 않는다
+    const c = ckt(["bat:battery", "led:led", "r:resistor:100", "in:probe"], ["bat.+~led.k", "led.a~in.p", "in.p~r.a", "r.b~bat.+"]);
+    expect(solve(c, {}).floating["in.p"]).toBe(false); // 저항을 지나 +에 닿는다
+    const c2 = ckt(["bat:battery", "led:led", "in:probe"], ["bat.+~led.k", "led.a~in.p"]);
+    expect(solve(c2, {}).floating["in.p"]).toBe(true);
+  });
+});

@@ -39,7 +39,7 @@ export const electricSim: Sim = {
             : !sol.converged
               ? "⚠ 회로 계산이 불안정해요."
               : null,
-      pinTip: (pin) => `${(sol.nodeV[`${pin.part}.${pin.pin}`] ?? 0).toFixed(2)} V`,
+      pinTip: (pin) => (sol.floating[`${pin.part}.${pin.pin}`] ? "? V (정해지지 않음)" : `${(sol.nodeV[`${pin.part}.${pin.pin}`] ?? 0).toFixed(2)} V`),
       partTip: (p) => (p.kind === "button" || p.kind === "button-nc" || p.kind === "switch" ? null : mA(sol.parts[p.id]?.current ?? 0)),
     };
   },
