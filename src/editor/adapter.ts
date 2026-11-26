@@ -48,12 +48,16 @@ export function createElectricSim(): Sim {
   frame(c, pressed, settings = {}) {
     const vc = vcOf(c);
     const sol = hasCap(c) ? solve(c, pressed, settings, { dt: C.DT, vc }) : solve(c, pressed, settings);
+    // 10 ms 간격으로는 빈 커패시터를 채우는 순간의 큰 전류가 안 보인다: 채점과 같게 1 µs로 한 번 더 본다
+    const inrush = hasCap(c) && !sol.short && solve(c, pressed, settings, { dt: 1e-6, vc }).short;
     return {
       part: (p, down) => partSymbol(p, sol.parts[p.id], down),
       wireClass: (w) => ((sol.parts[w.a.part]?.current ?? 0) >= 0.001 && (sol.parts[w.b.part]?.current ?? 0) >= 0.001 ? "flow" : ""),
       warning: () =>
         sol.short
           ? "⚠ 합선! 전지가 뜨거워져요. +와 −를 바로 잇는 선을 지우세요."
+          : inrush
+            ? "⚠ 합선! 빈 커패시터를 저항 없이 바로 채우고 있어요. 충전 저항을 넣어 주세요."
           : Object.values(sol.parts).some((r) => r.burnt)
             ? "⚠ LED가 탔어요! 저항으로 전류를 줄여 보세요."
             : !sol.converged

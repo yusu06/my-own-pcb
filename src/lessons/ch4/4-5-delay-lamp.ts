@@ -54,8 +54,7 @@ export const lesson: Lesson = {
       preset: ckt(["bat:battery:3"], []),
       checks: [
         { kind: "timing", part: "led", press: "btn", holdMs: 500, onFor: [2000, 5000] },
-        { kind: "noBurn" },
-        { kind: "noShort" },
+        { kind: "noBurn" }, // 합선은 timing이 1 µs 순간까지 본다(noShort는 다 찬 커패시터만 봐서 엇갈림)
       ],
       reference: ckt(parts(220), [...CHARGE, ...DRIVE]),
       wrong: [

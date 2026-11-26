@@ -200,6 +200,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         const burnt = frames.flatMap((f) => Object.entries(f.sol.parts).filter(([, p]) => p.burnt).map(([id]) => id))[0];
         if (burnt) return { ok: false, message: `${kindName(burnt)}가 탔어요. 저항으로 전류를 줄여 주세요.`, timeline };
         const range = `(알맞은 범위 ${chk.onFor[0] / 1000}~${chk.onFor[1] / 1000}초)`;
+        if (!onAt(release - 1)) return { ok: false, message: `버튼을 누르고 있는 동안에도 ${name}가 켜지지 않아요. 연결을 확인해 보세요.`, timeline };
         const off = frames.findIndex((_, k) => k >= release && !onAt(k));
         if (off < 0) return { ok: false, message: `버튼을 놓고 ${AFTER / 1000}초가 지나도 ${name}가 꺼지지 않아요 ${range}`, timeline };
         const ms = (off - release) * C.DT * 1000;

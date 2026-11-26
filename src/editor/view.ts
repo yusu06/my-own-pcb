@@ -23,6 +23,7 @@ export const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = 
   led: { a: "+", k: "−" },
   npn: { b: "B", c: "C", e: "E" },
   pot: { a: "0%", w: "손잡이", b: "100%" },
+  cap: { a: "+", b: "−" },
 };
 export function mountEditor(opts: {
   task: CircuitTask;
@@ -138,6 +139,7 @@ export function mountEditor(opts: {
       sim.reset?.(); // 실험을 시작할 때마다 커패시터는 빈 상태에서
       if (sim.advance && st.circuit.parts.some((p) => p.kind === "cap"))
         playTimer = window.setInterval(() => {
+          if (!el.isConnected) return stopPlay(); // 화면을 떠나면 destroy()가 불리지 않으므로 여기서 멈춘다
           sim.advance!(st.circuit, pressed, settings, 100);
           render();
         }, 100);

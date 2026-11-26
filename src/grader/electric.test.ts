@@ -157,3 +157,10 @@ test("timing: 저항 없이 커패시터를 바로 충전하면 합선", () => {
   expect(r.ok).toBe(false);
   expect(r.message).toContain("합선");
 });
+
+test("timing: 눌러도 한 번도 안 켜지면 그렇게 알려 준다", () => {
+  const dark = ckt(["bat:battery:3", "btn:button", "led:led"], ["bat.+~btn.a", "btn.b~led.k", "led.a~bat.-"]); // LED 거꾸로
+  const r = gradeElectric(dark, [TIMING], ["btn"])[0];
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("켜지지 않아요");
+});

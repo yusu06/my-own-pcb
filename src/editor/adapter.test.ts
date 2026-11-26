@@ -60,3 +60,14 @@ test("회로 모양이 바뀌면 커패시터 상태를 버린다", () => {
   const moved = { ...RC, wires: [...RC.wires, { a: { part: "r", pin: "a" }, b: { part: "btn", pin: "b" } }] };
   expect(capV(sim, moved)).toBeLessThan(0.1);
 });
+
+test("실험 화면: 빈 커패시터를 저항 없이 채우는 순간 합선 경고", () => {
+  const direct = ckt(["bat:battery:3", "btn:button", "cap:cap:220"], ["bat.+~btn.a", "btn.b~cap.a", "cap.b~bat.-"]);
+  expect(createElectricSim().frame(direct, { btn: true }, {}).warning()).toContain("합선");
+  expect(createElectricSim().frame(RC, { btn: true }, {}).warning()).toBeNull();
+});
+
+test("커패시터는 a 핀에 + 표시가 있다", async () => {
+  const { PIN_NAMES } = await import("./view");
+  expect(PIN_NAMES.cap).toMatchObject({ a: "+", b: "−" });
+});
