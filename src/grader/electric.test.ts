@@ -79,7 +79,7 @@ test("voltage: 범위 안이면 통과, 떠 있으면 실패", () => {
   expect(gradeElectric(pull(true), [HIGH], ["btn"])[0].ok).toBe(true);
   const low = gradeElectric(pull(true), [{ ...HIGH, when: { pressed: { btn: true } } }], ["btn"])[0];
   expect(low.ok).toBe(false);
-  expect(low.message).toContain("측정 핀 전압이");
+  expect(low.message).toContain("측정 핀 IN 전압이");
   const f = gradeElectric(pull(false), [HIGH], ["btn"])[0];
   expect(f.ok).toBe(false);
   expect(f.message).toContain("정해지지 않았어요");
@@ -105,4 +105,13 @@ test("noBurn은 손잡이 끝값까지 훑는다", () => {
   expect(gradeElectric(bare, [{ kind: "noBurn" }], [])[0].ok).toBe(false);
   const safe = ckt(["bat:battery", "pot:pot", "r:resistor:100", "led:led"], ["bat.+~pot.a", "pot.w~r.a", "r.b~led.a", "led.k~bat.-"]);
   expect(gradeElectric(safe, [{ kind: "noBurn" }], [])[0].ok).toBe(true);
+});
+
+test("측정 핀이 여럿이면 메시지가 어느 핀·어느 손잡이인지 알려 준다", () => {
+  const c = ckt(["bat:battery", "potx:pot", "poty:pot", "ax:probe", "ay:probe"], ["potx.a~bat.-", "potx.b~bat.+", "potx.w~ay.p", "poty.a~bat.-", "poty.b~bat.+", "poty.w~ax.p"]);
+  const chk: ElectricCheck = { kind: "voltage", at: { part: "ax", pin: "p" }, min: 0, max: 0.15, when: { settings: { potx: 0, poty: 1 } } };
+  const r = gradeElectric(c, [chk], [], { potx: "X 가변저항", poty: "Y 가변저항" })[0];
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("측정 핀 AX");
+  expect(r.message).toContain("X 가변저항 손잡이 0%");
 });

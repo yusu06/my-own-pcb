@@ -28,3 +28,8 @@ test("envKeys: 회로에 있는 센서에 맞는 슬라이더만", () => {
   expect(envKeys(ckt(["n:ntc", "l:ldr"], []))).toEqual(["light", "temp"]);
   expect(envKeys(ckt(["bat:battery", "r:resistor"], []))).toEqual([]);
 });
+
+test("가변저항은 양 끝 핀에 0 %·100 % 표시가 있다", async () => {
+  const { PIN_NAMES } = await import("./view");
+  expect(PIN_NAMES.pot).toMatchObject({ a: "0%", b: "100%" });
+});

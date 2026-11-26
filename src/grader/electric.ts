@@ -79,14 +79,14 @@ function conditions(c: Circuit, inputs: string[]): When[] {
   return combos(inputs).flatMap((pressed) => sets.map((settings) => ({ pressed, settings })));
 }
 
-/** 조건을 사람 말로: "밝기 10, 버튼 누름" */
-function describe(c: Circuit, w: When): string {
+/** 조건을 사람 말로: "밝기 10, 버튼 누름". name = 부품 id → 화면에 보이는 이름 */
+function describe(w: When, name: (id: string) => string): string {
   const s = w.settings ?? {};
   const parts = [
     ...Object.entries(s).map(([k, v]) =>
-      k === "light" ? `밝기 ${v}` : k === "temp" ? `온도 ${v} °C` : `${NAME[c.parts.find((p) => p.id === k)?.kind as PartKind] ?? k} 손잡이 ${Math.round(v * 100)}%`,
+      k === "light" ? `밝기 ${v}` : k === "temp" ? `온도 ${v} °C` : `${name(k)} 손잡이 ${Math.round(v * 100)}%`,
     ),
-    ...Object.entries(w.pressed ?? {}).map(([k, v]) => `${NAME[c.parts.find((p) => p.id === k)?.kind as PartKind] ?? k} ${v ? "누름" : "안 누름"}`),
+    ...Object.entries(w.pressed ?? {}).map(([k, v]) => `${name(k)} ${v ? "누름" : "안 누름"}`),
   ];
   return parts.length ? parts.join(", ") : "기본 상태";
 }
@@ -101,7 +101,8 @@ function connected(c: Circuit, id: string): boolean {
   return pinNames(p).every((pin) => others.has(netOf.get(pinKey({ part: id, pin }))!));
 }
 
-export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: string[]): CheckResult[] {
+/** labels = 부품 id → 부품함 이름표(같은 종류가 여럿일 때 메시지에서 구분) */
+export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: string[], labels: Record<string, string> = {}): CheckResult[] {
   const cache = new Map<string, Solution>();
   const run = (w: When) => {
     const key = JSON.stringify([Object.entries(w.pressed ?? {}).sort(), Object.entries(w.settings ?? {}).sort()]);
@@ -111,6 +112,7 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
   const runPressed = (pressed: Pressed) => run({ pressed });
   const unstable = c.parts.some((p) => p.kind === "npn") ? UNSTABLE_NPN : UNSTABLE;
   const kindName = (id: string) => NAME[c.parts.find((p) => p.id === id)?.kind as PartKind] ?? "부품";
+  const label = (id: string) => labels[id] ?? (NAME[c.parts.find((p) => p.id === id)?.kind as PartKind] ?? id);
 
   return checks.map((chk): CheckResult => {
     switch (chk.kind) {
@@ -153,13 +155,14 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         if (!s.converged) return { ok: false, message: unstable };
         const key = (r: PinRef) => pinKey(r);
         if (!c.parts.some((p) => p.id === chk.at.part)) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
+        const probe = chk.at.part.toUpperCase(); // 미리 놓인 측정 핀은 화면에 id 대문자로 보인다
         if (s.floating[key(chk.at)] || (chk.ref && s.floating[key(chk.ref)]))
-          return { ok: false, message: `${describe(c, chk.when)}: 측정 핀 전압이 정해지지 않았어요. 어디에도 이어지지 않은 점이 있어요.` };
+          return { ok: false, message: `${describe(chk.when, label)}: 측정 핀 ${probe} 전압이 정해지지 않았어요. 어디에도 이어지지 않은 점이 있어요.` };
         const v = (s.nodeV[key(chk.at)] ?? 0) - (chk.ref ? (s.nodeV[key(chk.ref)] ?? 0) : 0);
         const range = `(알맞은 범위 ${chk.min}~${chk.max} V)`;
         return v >= chk.min && v <= chk.max
-          ? { ok: true, message: `${describe(c, chk.when)}: 측정 핀 전압 ${v.toFixed(2)} V ${range}` }
-          : { ok: false, message: `${describe(c, chk.when)}: 측정 핀 전압이 ${v.toFixed(2)} V예요 ${range}` };
+          ? { ok: true, message: `${describe(chk.when, label)}: 측정 핀 ${probe} 전압 ${v.toFixed(2)} V ${range}` }
+          : { ok: false, message: `${describe(chk.when, label)}: 측정 핀 ${probe} 전압이 ${v.toFixed(2)} V예요 ${range}` };
       }
       case "state": {
         const s = run(chk.when);
@@ -168,8 +171,8 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         if (!s.parts[chk.part]) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
         const on = s.parts[chk.part].on;
         return on === chk.on
-          ? { ok: true, message: `${describe(c, chk.when)}일 때 ${name}가 ${on ? "켜져요" : "꺼져요"}.` }
-          : { ok: false, message: `${describe(c, chk.when)}일 때 ${name}가 ${chk.on ? "켜져야" : "꺼져야"} 해요.` };
+          ? { ok: true, message: `${describe(chk.when, label)}일 때 ${name}가 ${on ? "켜져요" : "꺼져요"}.` }
+          : { ok: false, message: `${describe(chk.when, label)}일 때 ${name}가 ${chk.on ? "켜져야" : "꺼져야"} 해요.` };
       }
       case "noBurn": {
         const sols = conditions(c, inputs).map(run);

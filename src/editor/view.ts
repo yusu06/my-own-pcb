@@ -19,10 +19,10 @@ export interface EditorHandle {
 
 const PIN_HIT_PX = 22;
 const WIRE_HIT_PX = 10;
-const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
+export const PIN_NAMES: Partial<Record<Part["kind"], Record<string, string>>> = {
   led: { a: "+", k: "−" },
   npn: { b: "B", c: "C", e: "E" },
-  pot: { w: "손잡이" },
+  pot: { a: "0%", w: "손잡이", b: "100%" },
 };
 export function mountEditor(opts: {
   task: CircuitTask;

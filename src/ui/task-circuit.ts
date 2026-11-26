@@ -38,7 +38,8 @@ export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
 
   function grade(c: Circuit): { rs: CheckResult[]; notes: string[] } {
     if (task.kind === "electric") {
-      return { rs: gradeElectric(c, task.checks, task.palette.filter((p) => SWITCH_KINDS.includes(p.kind)).map((p) => p.id)), notes: [] };
+      const labels = Object.fromEntries(task.palette.map((p) => [p.id, p.label]));
+      return { rs: gradeElectric(c, task.checks, task.palette.filter((p) => SWITCH_KINDS.includes(p.kind)).map((p) => p.id), labels), notes: [] };
     }
     const g = gradeLogic(c, task, lib());
     const notes = [`🔩 부품 원가: NAND ${g.cost}개`];
