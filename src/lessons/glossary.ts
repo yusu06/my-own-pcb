@@ -72,5 +72,9 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   accumulator: { term: "누산기(A)", short: "계산 결과를 담아 두는 CPU 안의 레지스터. 토이4는 레지스터가 이것 하나뿐이다." },
   mcu: { term: "MCU", short: "마이크로컨트롤러. CPU, 메모리, 입출력 핀, 타이머 등을 칩 하나에 넣은 것. 가전과 장난감 속 작은 컴퓨터." },
   firmware: { term: "펌웨어", short: "기기 안의 ROM(플래시)에 넣어 두고 전원이 켜지면 바로 도는 프로그램." },
+  "voltage-divider": { term: "분압기", short: "저항 두 개를 직렬로 이어 그 사이에서 전압을 나눠 꺼내는 회로. 가운데 전압 = 전체 전압 × 아래 저항 ÷ 두 저항의 합." },
+  potentiometer: { term: "가변저항", short: "손잡이를 돌리면 가운데 핀(손잡이 핀)이 저항 위를 움직여 두 쪽 저항 비율이 바뀌는 부품. 볼륨 노브가 대표적이다." },
+  analog: { term: "아날로그", short: "0과 1 두 값이 아니라 그 사이 아무 값이나 될 수 있는 신호. 예: 0~3V 사이의 전압." },
+  adc: { term: "ADC", short: "아날로그-디지털 변환기. 핀에 들어온 전압을 숫자로 바꿔 MCU가 읽게 해 준다." },
   "fetch-decode-execute": { term: "인출-해석-실행", short: "CPU가 도는 한 바퀴. 명령어를 꺼내고(인출), 무슨 일인지 알아보고(해석), 해낸다(실행)." },
 };
