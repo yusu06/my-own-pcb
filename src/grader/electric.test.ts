@@ -115,3 +115,45 @@ test("측정 핀이 여럿이면 메시지가 어느 핀·어느 손잡이인지
   expect(r.message).toContain("측정 핀 AX");
   expect(r.message).toContain("X 가변저항 손잡이 0%");
 });
+
+/** 딜레이 램프: 버튼으로 커패시터를 채우고, 커패시터가 베이스를 몬다 */
+const delay = (uf: number | null, rc = true) =>
+  ckt(
+    ["bat:battery:3", "btn:button", "rc:resistor:100", ...(uf ? [`cap:cap:${uf}`] : []), "rb:resistor:10000", "q:npn", "rl:resistor:100", "led:led"],
+    [
+      ...(rc ? ["bat.+~btn.a", "btn.b~rc.a", "rc.b~cap.a"] : ["bat.+~btn.a", "btn.b~cap.a"]),
+      ...(uf ? ["cap.b~bat.-"] : ["rc.b~rb.a"]),
+      "cap.a~rb.a",
+      "rb.b~q.b",
+      "q.e~bat.-",
+      "bat.+~rl.a",
+      "rl.b~led.a",
+      "led.k~q.c",
+    ].filter((w) => uf || !w.includes("cap.")),
+  );
+const TIMING: ElectricCheck = { kind: "timing", part: "led", press: "btn", holdMs: 500, onFor: [2000, 5000] };
+
+test("timing: 커패시터가 LED를 몇 초 더 켜 둔다", () => {
+  const r = gradeElectric(delay(220), [TIMING], ["btn"])[0];
+  expect(r.message).toContain("동안 켜져 있어요");
+  expect(r.ok).toBe(true);
+  expect(r.timeline?.map((row) => row.name)).toEqual(["btn", "led"]);
+});
+
+test("timing: 커패시터가 없으면 너무 짧다", () => {
+  const r = gradeElectric(delay(null), [TIMING], ["btn"])[0];
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("만에 꺼져요");
+});
+
+test("timing: 10초 안에 안 꺼지면 너무 길다", () => {
+  const r = gradeElectric(delay(1000), [TIMING], ["btn"])[0];
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("꺼지지 않아요");
+});
+
+test("timing: 저항 없이 커패시터를 바로 충전하면 합선", () => {
+  const r = gradeElectric(delay(220, false), [TIMING], ["btn"])[0];
+  expect(r.ok).toBe(false);
+  expect(r.message).toContain("합선");
+});

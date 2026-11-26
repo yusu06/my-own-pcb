@@ -2,6 +2,8 @@ import type { Bit } from "../sim/digital/sim";
 import { buildNets, pinKey } from "../sim/electric/netlist";
 import { pinNames, SWITCH_KINDS } from "../sim/electric/parts";
 import { solve, type Solution } from "../sim/electric/solve";
+import { simulateTime } from "../sim/electric/time";
+import { C } from "../sim/electric/parts";
 import type { Circuit, PartKind, PinRef, Pressed, Settings } from "../sim/electric/types";
 
 /** 채점 조건: 누른 버튼과 조작 값(손잡이·밝기·온도) */
@@ -19,6 +21,8 @@ export type ElectricCheck =
   | { kind: "voltage"; at: PinRef; ref?: PinRef; min: number; max: number; when: When }
   /** 그 조건에서 부품이 켜졌는지(LED·전구) */
   | { kind: "state"; part: string; on: boolean; when: When }
+  /** 0.5 s 쉼 → press 버튼을 holdMs 누름 → 놓고 최대 10 s. 놓은 뒤 part가 켜져 있는 시간(ms)이 onFor 안 */
+  | { kind: "timing"; part: string; press: string; holdMs: number; onFor: [number, number] }
   | { kind: "noBurn" }
   | { kind: "noShort" };
 
@@ -173,6 +177,36 @@ export function gradeElectric(c: Circuit, checks: ElectricCheck[], inputs: strin
         return on === chk.on
           ? { ok: true, message: `${describe(chk.when, label)}일 때 ${name}가 ${on ? "켜져요" : "꺼져요"}.` }
           : { ok: false, message: `${describe(chk.when, label)}일 때 ${name}가 ${chk.on ? "켜져야" : "꺼져야"} 해요.` };
+      }
+      case "timing": {
+        const REST = 500;
+        const AFTER = 10000;
+        const frames = simulateTime(c, [{ ms: REST }, { ms: chk.holdMs, pressed: { [chk.press]: true } }, { ms: AFTER }]);
+        const name = kindName(chk.part);
+        if (!c.parts.some((p) => p.id === chk.part)) return { ok: false, message: "필요한 부품을 아직 놓지 않았어요." };
+        const release = Math.round((REST + chk.holdMs) / 1000 / C.DT); // 놓은 뒤 첫 단계
+        const onAt = (k: number) => frames[k].sol.parts[chk.part]?.on ?? false;
+        // 250 ms마다 표본: 보여 주기만 하고 칸별로 채점하지는 않는다
+        const samples = frames.filter((_, k) => (k + 1) % 25 === 0).map((f) => f.t);
+        const at = (t: number) => frames[Math.round(t / C.DT) - 1];
+        const timeline: TimeRow[] = [
+          { name: chk.press, label: label(chk.press), values: samples.map((t) => (t * 1000 > REST && t * 1000 <= REST + chk.holdMs ? 1 : 0)) },
+          { name: chk.part, label: name, values: samples.map((t) => (at(t).sol.parts[chk.part]?.on ? 1 : 0)) },
+        ];
+        if (frames.some((f) => !f.sol.converged)) return { ok: false, message: unstable, timeline };
+        // 10 ms 간격으로는 빈 커패시터를 채우는 순간의 큰 전류가 보이지 않는다: 누르는 순간을 1 µs로 한 번 더 본다
+        const instant = solve(c, { [chk.press]: true }, {}, { dt: 1e-6, vc: frames[release - Math.round(chk.holdMs / 1000 / C.DT) - 1]?.sol.capV ?? {} });
+        if (instant.short || frames.some((f) => f.sol.short)) return { ok: false, message: "합선! 커패시터를 저항 없이 바로 채우면 순간적으로 전지가 합선돼요.", timeline };
+        const burnt = frames.flatMap((f) => Object.entries(f.sol.parts).filter(([, p]) => p.burnt).map(([id]) => id))[0];
+        if (burnt) return { ok: false, message: `${kindName(burnt)}가 탔어요. 저항으로 전류를 줄여 주세요.`, timeline };
+        const range = `(알맞은 범위 ${chk.onFor[0] / 1000}~${chk.onFor[1] / 1000}초)`;
+        const off = frames.findIndex((_, k) => k >= release && !onAt(k));
+        if (off < 0) return { ok: false, message: `버튼을 놓고 ${AFTER / 1000}초가 지나도 ${name}가 꺼지지 않아요 ${range}`, timeline };
+        const ms = (off - release) * C.DT * 1000;
+        const sec = (ms / 1000).toFixed(1);
+        if (ms < chk.onFor[0]) return { ok: false, message: `버튼을 놓은 뒤 ${name}가 ${sec}초 만에 꺼져요. 더 오래 켜져 있어야 해요 ${range}`, timeline };
+        if (ms > chk.onFor[1]) return { ok: false, message: `버튼을 놓은 뒤 ${name}가 ${sec}초나 켜져 있어요. 더 빨리 꺼져야 해요 ${range}`, timeline };
+        return { ok: true, message: `버튼을 놓은 뒤 ${name}가 ${sec}초 동안 켜져 있어요 ${range}`, timeline };
       }
       case "noBurn": {
         const sols = conditions(c, inputs).map(run);
