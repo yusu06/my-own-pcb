@@ -124,9 +124,24 @@ export function mountEditor(opts: {
     if (st.circuit !== before) opts.onChange(st.circuit);
     render();
   }
+  // 커패시터가 있으면 실험 모드에서 실제 시간으로 재생한다(100 ms마다 한 프레임)
+  let playTimer: number | undefined;
+  function stopPlay() {
+    clearInterval(playTimer);
+    playTimer = undefined;
+  }
   function setMode(m: "edit" | "run") {
     mode = m;
     st = { ...st, pending: null };
+    stopPlay();
+    if (m === "run") {
+      sim.reset?.(); // 실험을 시작할 때마다 커패시터는 빈 상태에서
+      if (sim.advance && st.circuit.parts.some((p) => p.kind === "cap"))
+        playTimer = window.setInterval(() => {
+          sim.advance!(st.circuit, pressed, settings, 100);
+          render();
+        }, 100);
+    }
     closeMenu();
     render();
   }
@@ -205,7 +220,8 @@ export function mountEditor(opts: {
     for (const p of c.parts) {
       const g = fr.part(p, !!pressed[p.id]);
       const label = svg("text", { x: 0, y: p.kind === "npn" ? 0 : 34, class: "part-label", "text-anchor": "middle" });
-      label.textContent = labelOf(p) + (p.kind === "resistor" && p.value ? ` ${p.value >= 1000 ? `${p.value / 1000}k` : p.value}Ω` : "");
+      label.textContent =
+        labelOf(p) + (p.kind === "resistor" && p.value ? ` ${p.value >= 1000 ? `${p.value / 1000}k` : p.value}Ω` : p.kind === "cap" && p.value ? ` ${p.value}µF` : "");
       if (p.kind === "npn") label.setAttribute("transform", "translate(0 52)");
       g.append(label);
       world.append(g);
@@ -430,6 +446,7 @@ export function mountEditor(opts: {
       render();
     },
     destroy() {
+      stopPlay();
       detach();
       document.removeEventListener("keydown", onKey);
       clearTimeout(tipTimer);

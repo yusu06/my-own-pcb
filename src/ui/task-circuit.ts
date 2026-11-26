@@ -1,4 +1,4 @@
-import { electricSim, logicSim } from "../editor/adapter";
+import { createElectricSim, logicSim } from "../editor/adapter";
 import { sanitizeCircuit } from "../editor/sanitize";
 import { mountEditor } from "../editor/view";
 import { gradeElectric, type CheckResult } from "../grader/electric";
@@ -59,7 +59,7 @@ export function renderCircuitTask(ctx: Ctx, lesson: Lesson, ti: number, onPassed
   const editor = mountEditor({
     task,
     saved: sanitizeCircuit(ctx.store.data.work[key], task, lib()),
-    sim: task.kind === "electric" ? electricSim : logicSim(lib()),
+    sim: task.kind === "electric" ? createElectricSim() : logicSim(lib()),
     chipRef,
     onChange(c) {
       ctx.store.data = saveWork(ctx.store.data, key, c);

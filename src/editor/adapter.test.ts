@@ -1,5 +1,5 @@
 import { expect, test } from "vitest";
-import { envKeys, logicSim } from "./adapter";
+import { createElectricSim, envKeys, logicSim } from "./adapter";
 import { makeLib } from "../sim/digital/chips";
 import { ckt } from "../sim/electric/ckt";
 
@@ -32,4 +32,31 @@ test("envKeys: 회로에 있는 센서에 맞는 슬라이더만", () => {
 test("가변저항은 양 끝 핀에 0 %·100 % 표시가 있다", async () => {
   const { PIN_NAMES } = await import("./view");
   expect(PIN_NAMES.pot).toMatchObject({ a: "0%", b: "100%" });
+});
+
+const RC = ckt(
+  ["bat:battery:3", "btn:button", "r:resistor:100", "cap:cap:1000"],
+  ["bat.+~btn.a", "btn.b~r.a", "r.b~cap.a", "cap.b~bat.-"],
+);
+const capV = (sim: ReturnType<typeof createElectricSim>, c = RC) => parseFloat(sim.frame(c, {}, {}).partTip(c.parts.find((p) => p.id === "cap")!)!);
+
+test("advance: 버튼을 1초 누르면 커패시터 전압이 오른다", () => {
+  const sim = createElectricSim();
+  expect(capV(sim)).toBeLessThan(0.1);
+  sim.advance!(RC, { btn: true }, {}, 1000);
+  expect(capV(sim)).toBeGreaterThan(1.5);
+});
+
+test("reset 뒤에는 다시 0 V", () => {
+  const sim = createElectricSim();
+  sim.advance!(RC, { btn: true }, {}, 1000);
+  sim.reset!();
+  expect(capV(sim)).toBeLessThan(0.1);
+});
+
+test("회로 모양이 바뀌면 커패시터 상태를 버린다", () => {
+  const sim = createElectricSim();
+  sim.advance!(RC, { btn: true }, {}, 1000);
+  const moved = { ...RC, wires: [...RC.wires, { a: { part: "r", pin: "a" }, b: { part: "btn", pin: "b" } }] };
+  expect(capV(sim, moved)).toBeLessThan(0.1);
 });

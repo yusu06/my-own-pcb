@@ -80,6 +80,9 @@ function body(p: Part, r: PartResult | undefined, pressed: boolean): SVGElement[
         path("M -20 16 L 20 -16 L 28 -16"),
         Object.assign(svg("text", { x: 22, y: -22, class: "pol" }), { textContent: "−t°" }),
       ];
+    case "cap":
+      // 평행판 두 장
+      return [line(-40, 0, -6, 0), line(6, 0, 40, 0), line(-6, -16, -6, 16, "thick"), line(6, -16, 6, 16, "thick")];
     case "probe":
       // MCU 입력 핀: 전류가 흐르지 않는 측정점
       return [

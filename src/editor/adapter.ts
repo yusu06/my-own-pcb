@@ -1,6 +1,6 @@
 import { simulate, type Bit, type ChipLib } from "../sim/digital/sim";
 import { solve } from "../sim/electric/solve";
-import { sensorR } from "../sim/electric/parts";
+import { C, sensorR } from "../sim/electric/parts";
 import type { Circuit, Part, PinRef, Pressed, Settings, Wire } from "../sim/electric/types";
 import { partSymbol } from "./symbols";
 
@@ -23,6 +23,10 @@ export interface Sim {
   /** 실험 모드: 탭하면 켜짐/꺼짐이 바뀌는 부품 */
   toggle(p: Part): boolean;
   runHelp: string;
+  /** 시간이 있는 회로(커패시터): ms만큼 시간을 진행한다 */
+  advance?(c: Circuit, pressed: Pressed, settings: Settings, ms: number): void;
+  /** 시간 상태(커패시터 전압)를 0으로 */
+  reset?(): void;
 }
 
 const mA = (a: number) => `${(a * 1000).toFixed(1)} mA`;
@@ -33,9 +37,17 @@ export function envKeys(c: Circuit): ("light" | "temp")[] {
   return [...(c.parts.some((p) => p.kind === "ldr") ? ["light" as const] : []), ...(c.parts.some((p) => p.kind === "ntc") ? ["temp" as const] : [])];
 }
 
-export const electricSim: Sim = {
+/** 전기 회로 어댑터. 커패시터 전압을 기억하므로 과제 화면마다 새로 만든다 */
+export function createElectricSim(): Sim {
+  // 회로 모양이 바뀌면 커패시터 전압을 버린다
+  let caps: { shape: string; vc: Record<string, number> } = { shape: "", vc: {} };
+  const shapeOf = (c: Circuit) => JSON.stringify([c.parts.map((p) => [p.id, p.kind, p.value]), c.wires]);
+  const vcOf = (c: Circuit) => (caps.shape === shapeOf(c) ? caps.vc : {});
+  const hasCap = (c: Circuit) => c.parts.some((p) => p.kind === "cap");
+  return {
   frame(c, pressed, settings = {}) {
-    const sol = solve(c, pressed, settings);
+    const vc = vcOf(c);
+    const sol = hasCap(c) ? solve(c, pressed, settings, { dt: C.DT, vc }) : solve(c, pressed, settings);
     return {
       part: (p, down) => partSymbol(p, sol.parts[p.id], down),
       wireClass: (w) => ((sol.parts[w.a.part]?.current ?? 0) >= 0.001 && (sol.parts[w.b.part]?.current ?? 0) >= 0.001 ? "flow" : ""),
@@ -51,6 +63,8 @@ export const electricSim: Sim = {
       partTip: (p) =>
         p.kind === "button" || p.kind === "button-nc" || p.kind === "switch" || p.kind === "probe"
           ? null
+          : p.kind === "cap"
+            ? `${(vc[p.id] ?? 0).toFixed(2)} V`
           : p.kind === "pot"
             ? `손잡이 ${Math.round((settings[p.id] ?? 0.5) * 100)}%`
             : p.kind === "ldr" || p.kind === "ntc"
@@ -61,7 +75,16 @@ export const electricSim: Sim = {
   hold: (p) => p.kind === "button" || p.kind === "button-nc",
   toggle: (p) => p.kind === "switch",
   runHelp: "스위치·버튼을 눌러 보세요. 핀을 탭하면 전압, 부품을 탭하면 전류가 보여요.",
-};
+  advance(c, pressed, settings, ms) {
+    let vc = vcOf(c);
+    for (let k = 0; k < Math.round(ms / 1000 / C.DT); k++) vc = solve(c, pressed, settings, { dt: C.DT, vc }).capV;
+    caps = { shape: shapeOf(c), vc };
+  },
+  reset() {
+    caps = { shape: "", vc: {} };
+  },
+  };
+}
 
 const BIT_CLASS: Record<string, string> = { 1: "hi", 0: "lo", X: "x" };
 
