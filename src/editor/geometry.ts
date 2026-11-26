@@ -18,6 +18,10 @@ export const PIN_OFFSET: Record<PartKind, Record<string, [number, number]>> = {
   out: { a: [-2, 0] },
   dff: { d: [-2, -1], clk: [-2, 1], q: [2, 0] },
   chip: {}, // chipPins로 계산
+  pot: { a: [-2, 0], w: [0, 2], b: [2, 0] },
+  ldr: { a: [-2, 0], b: [2, 0] },
+  ntc: { a: [-2, 0], b: [2, 0] },
+  probe: { p: [0, 0] },
 };
 
 /** 칩: 입력은 왼쪽(x=-2), 출력은 오른쪽(x=2), 세로 2칸 간격으로 가운데 정렬 */

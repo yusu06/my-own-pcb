@@ -1,5 +1,6 @@
 import { describe, expect, test } from "vitest";
 import { solve } from "./solve";
+import { sensorR } from "./parts";
 import { ckt } from "./ckt";
 import type { Pressed } from "./types";
 
@@ -118,4 +119,38 @@ test("트랜지스터 C·E를 거꾸로 꽂으면 LED가 켜지지 않는다", (
     { btn: true },
   );
   expect(s.parts.led.on).toBe(false);
+});
+
+describe("조작 부품 (4장)", () => {
+  const divider = ckt(["bat:battery", "pot:pot", "adc:probe"], ["bat.+~pot.a", "pot.b~bat.-", "adc.p~pot.w"]);
+
+  test("가변저항은 손잡이 위치로 전압을 나눈다", () => {
+    close(solve(divider, {}, { pot: 0 }).nodeV["adc.p"], 3, 0.01);
+    close(solve(divider, {}, { pot: 0.5 }).nodeV["adc.p"], 1.5, 0.01);
+    close(solve(divider, {}, { pot: 1 }).nodeV["adc.p"], 0, 0.01);
+    close(solve(divider, {}).nodeV["adc.p"], 1.5, 0.01);
+  });
+
+  test("손잡이 끝(0·1)에서도 행렬이 풀리고 수렴한다", () => {
+    for (const pos of [0, 1]) {
+      const s = solve(divider, {}, { pot: pos });
+      expect(s.converged).toBe(true);
+      expect(Number.isFinite(s.nodeV["adc.p"])).toBe(true);
+    }
+  });
+
+  test("sensorR: 광센서·서미스터 값", () => {
+    const ldr = { id: "l", kind: "ldr", x: 0, y: 0, rot: 0 } as const;
+    const ntc = { id: "n", kind: "ntc", x: 0, y: 0, rot: 0 } as const;
+    close(sensorR(ldr, { light: 0 }), 200000, 1);
+    close(sensorR(ldr, { light: 100 }), 1000, 1);
+    close(sensorR(ntc, {}), 10000, 1);
+    close(sensorR(ntc, { temp: 0 }), 33600, 1000);
+    close(sensorR(ntc, { temp: 50 }), 3600, 300);
+  });
+
+  test("측정 핀은 전류가 흐르지 않는다", () => {
+    const c = ckt(["bat:battery", "r1:resistor:1000", "r2:resistor:1000", "adc:probe"], ["bat.+~r1.a", "r1.b~r2.a", "r2.b~bat.-", "adc.p~r1.b"]);
+    close(solve(c, {}).nodeV["adc.p"], 1.5, 0.01);
+  });
 });

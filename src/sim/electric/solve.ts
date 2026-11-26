@@ -1,7 +1,7 @@
 import { solveLinear } from "./linear";
 import { buildNets, pinKey } from "./netlist";
-import { C, isClosed } from "./parts";
-import type { Circuit, Part, Pressed } from "./types";
+import { C, isClosed, potR, sensorR } from "./parts";
+import type { Circuit, Part, Pressed, Settings } from "./types";
 
 export interface PartResult {
   /** A, 크기만 */
@@ -35,7 +35,7 @@ const isSwitch = (p: Part) => p.kind === "switch" || p.kind === "button" || p.ki
  * 직류 해석. 모든 부품을 컨덕턴스 + 전류원으로 바꿔 절점 방정식을 푼다.
  * LED·B–E 접합은 구간 선형(꺼짐 / Vf + 직렬저항)이고, 상태가 더 바뀌지 않을 때까지 반복한다.
  */
-export function solve(c: Circuit, pressed: Pressed): Solution {
+export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): Solution {
   const { netOf, count } = buildNets(c);
   const net = (p: Part, pin: string) => netOf.get(pinKey({ part: p.id, pin }))!;
   const nodeV: Record<string, number> = Object.fromEntries([...netOf.keys()].map((k) => [k, 0]));
@@ -55,7 +55,8 @@ export function solve(c: Circuit, pressed: Pressed): Solution {
   }
   const jOn = new Map<Junction, boolean>(junctions.map((j) => [j, false]));
   const ceOn = new Map<string, boolean>();
-  const resist = (p: Part) => (p.kind === "lamp" ? C.RLAMP : p.kind === "resistor" ? (p.value ?? 100) : C.RCLOSED);
+  const resist = (p: Part) =>
+    p.kind === "lamp" ? C.RLAMP : p.kind === "resistor" ? (p.value ?? 100) : p.kind === "ldr" || p.kind === "ntc" ? sensorR(p, settings) : C.RCLOSED;
 
   let x: number[] = new Array(n).fill(0);
   const vNet = (k: number) => (k === ground ? 0 : x[idx.get(k)!]);
@@ -89,8 +90,12 @@ export function solve(c: Circuit, pressed: Pressed): Solution {
       if (p.kind === "battery") {
         cond(net(p, "+"), net(p, "-"), 1 / C.RBAT);
         src(net(p, "+"), net(p, "-"), (p.value ?? C.VBAT) / C.RBAT);
-      } else if (p.kind === "resistor" || p.kind === "lamp" || (isSwitch(p) && isClosed(p, pressed))) {
+      } else if (p.kind === "resistor" || p.kind === "lamp" || p.kind === "ldr" || p.kind === "ntc" || (isSwitch(p) && isClosed(p, pressed))) {
         cond(net(p, "a"), net(p, "b"), 1 / resist(p));
+      } else if (p.kind === "pot") {
+        const [ra, rb] = potR(p, settings);
+        cond(net(p, "a"), net(p, "w"), 1 / ra);
+        cond(net(p, "w"), net(p, "b"), 1 / rb);
       } else if (p.kind === "npn" && ceOn.get(p.id)) {
         cond(net(p, "c"), net(p, "e"), 1 / C.RCE_ON);
       }
@@ -135,7 +140,7 @@ export function solve(c: Circuit, pressed: Pressed): Solution {
     if (p.kind === "battery") {
       r.current = Math.abs(((p.value ?? C.VBAT) - dv(p, "+", "-")) / C.RBAT);
       if (r.current > C.SHORT_A) short = true;
-    } else if (p.kind === "resistor" || p.kind === "lamp") {
+    } else if (p.kind === "resistor" || p.kind === "lamp" || p.kind === "ldr" || p.kind === "ntc") {
       r.current = Math.abs(dv(p, "a", "b")) / resist(p);
       if (p.kind === "lamp") {
         r.on = r.current >= C.LAMP_ON;

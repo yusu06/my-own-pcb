@@ -3,7 +3,12 @@ export type PartKind =
   // 논리 부품 (M3)
   | "nand" | "in" | "out" | "chip"
   // 기본 D 플립플롭 (M5b)
-  | "dff";
+  | "dff"
+  // 4장: 가변저항, 광센서, 서미스터, 측정 핀(MCU 입력, 전류 없음)
+  | "pot" | "ldr" | "ntc" | "probe";
+
+/** 조작 값: 가변저항 id → 손잡이 0~1(기본 0.5), light → 밝기 0~100(기본 50), temp → 온도 °C(기본 25) */
+export type Settings = Record<string, number>;
 
 /** 부품함 부품 참조. v: null = 기본 부품. inputs/outputs는 놓을 때 복사한 스냅샷(핀 배치가 이것으로 정해진다). */
 export interface ChipRef {
