@@ -22,6 +22,7 @@ export const PIN_OFFSET: Record<PartKind, Record<string, [number, number]>> = {
   ldr: { a: [-2, 0], b: [2, 0] },
   ntc: { a: [-2, 0], b: [2, 0] },
   probe: { p: [0, 0] },
+  cap: { a: [-2, 0], b: [2, 0] },
 };
 
 /** 칩: 입력은 왼쪽(x=-2), 출력은 오른쪽(x=2), 세로 2칸 간격으로 가운데 정렬 */

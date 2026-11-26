@@ -18,6 +18,7 @@ export const PINS: Record<PartKind, string[]> = {
   ldr: ["a", "b"],
   ntc: ["a", "b"],
   probe: ["p"],
+  cap: ["a", "b"],
 };
 
 export function pinNames(p: Part): string[] {
@@ -51,6 +52,9 @@ export const C = {
   LDR_BRIGHT: 1000,
   NTC_R25: 10000,
   NTC_B: 3950,
+  CAP_UF: 1000,
+  /** 시간 해석 한 단계(초) */
+  DT: 0.01,
 } as const;
 
 /** 광센서(밝기에 따라 로그 보간)·서미스터(B 상수 식)의 지금 저항 */

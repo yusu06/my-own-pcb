@@ -5,7 +5,9 @@ export type PartKind =
   // 기본 D 플립플롭 (M5b)
   | "dff"
   // 4장: 가변저항, 광센서, 서미스터, 측정 핀(MCU 입력, 전류 없음)
-  | "pot" | "ldr" | "ntc" | "probe";
+  | "pot" | "ldr" | "ntc" | "probe"
+  // 커패시터(value = µF): 직류에서는 끊긴 선, 시간 해석에서만 전하를 담는다
+  | "cap";
 
 /** 조작 값: 가변저항 id → 손잡이 0~1(기본 0.5), light → 밝기 0~100(기본 50), temp → 온도 °C(기본 25) */
 export type Settings = Record<string, number>;

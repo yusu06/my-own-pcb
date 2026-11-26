@@ -17,8 +17,16 @@ export interface Solution {
   parts: Record<string, PartResult>;
   short: boolean;
   converged: boolean;
+  /** 커패시터 id → 이번 해의 Va − Vb */
+  capV: Record<string, number>;
   /** 키 = pinKey. 지금 전도하는 부품으로 전지 단자에 닿지 못하면 true(전압이 정해지지 않음) */
   floating: Record<string, boolean>;
+}
+
+/** 시간 해석 한 단계: dt(초), vc = 커패시터 id → 직전 단계의 Va − Vb */
+export interface Transient {
+  dt: number;
+  vc: Record<string, number>;
 }
 
 /** 다이오드형 접합: LED(a→k) 또는 npn의 B→E */
@@ -37,13 +45,13 @@ const isSwitch = (p: Part) => p.kind === "switch" || p.kind === "button" || p.ki
  * 직류 해석. 모든 부품을 컨덕턴스 + 전류원으로 바꿔 절점 방정식을 푼다.
  * LED·B–E 접합은 구간 선형(꺼짐 / Vf + 직렬저항)이고, 상태가 더 바뀌지 않을 때까지 반복한다.
  */
-export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): Solution {
+export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}, tr?: Transient): Solution {
   const { netOf, count } = buildNets(c);
   const net = (p: Part, pin: string) => netOf.get(pinKey({ part: p.id, pin }))!;
   const nodeV: Record<string, number> = Object.fromEntries([...netOf.keys()].map((k) => [k, 0]));
   const parts: Record<string, PartResult> = Object.fromEntries(c.parts.map((p) => [p.id, { ...OFF }]));
   const firstBat = c.parts.find((p) => p.kind === "battery");
-  if (!firstBat) return { nodeV, parts, short: false, converged: true, floating: Object.fromEntries([...netOf.keys()].map((k) => [k, true])) };
+  if (!firstBat) return { nodeV, parts, short: false, converged: true, capV: {}, floating: Object.fromEntries([...netOf.keys()].map((k) => [k, true])) };
 
   const ground = net(firstBat, "-");
   const idx = new Map<number, number>();
@@ -98,6 +106,11 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
         const [ra, rb] = potR(p, settings);
         cond(net(p, "a"), net(p, "w"), 1 / ra);
         cond(net(p, "w"), net(p, "b"), 1 / rb);
+      } else if (p.kind === "cap" && tr) {
+        // 후진 오일러: C/dt 컨덕턴스 + 직전 전압을 유지하려는 전류원
+        const g = ((p.value ?? C.CAP_UF) * 1e-6) / tr.dt;
+        cond(net(p, "a"), net(p, "b"), g);
+        src(net(p, "a"), net(p, "b"), g * (tr.vc[p.id] ?? 0));
       } else if (p.kind === "npn" && ceOn.get(p.id)) {
         cond(net(p, "c"), net(p, "e"), 1 / C.RCE_ON);
       }
@@ -148,6 +161,7 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
     else if (p.kind === "resistor" || p.kind === "lamp" || p.kind === "ldr" || p.kind === "ntc" || (isSwitch(p) && isClosed(p, pressed))) link(net(p, "a"), net(p, "b"));
     else if (p.kind === "pot") (link(net(p, "a"), net(p, "w")), link(net(p, "w"), net(p, "b")));
     else if (p.kind === "npn" && ceOn.get(p.id)) link(net(p, "c"), net(p, "e"));
+    else if (p.kind === "cap" && tr) link(net(p, "a"), net(p, "b"));
   }
   for (const j of junctions) if (jOn.get(j)) link(net(j.part, j.a), net(j.part, j.k));
   const reached = new Set(seed);
@@ -181,5 +195,7 @@ export function solve(c: Circuit, pressed: Pressed, settings: Settings = {}): So
     r.on = r.current >= C.LED_ON && !r.burnt;
     r.brightness = r.on ? Math.min(r.current / C.LED_FULL, 1) : 0;
   }
-  return { nodeV, parts, short, converged, floating };
+  const capV = Object.fromEntries(c.parts.filter((p) => p.kind === "cap").map((p) => [p.id, dv(p, "a", "b")]));
+  for (const p of c.parts) if (p.kind === "cap" && tr) parts[p.id].current = Math.abs(((p.value ?? C.CAP_UF) * 1e-6 * (capV[p.id] - (tr.vc[p.id] ?? 0))) / tr.dt);
+  return { nodeV, parts, short, converged, floating, capV };
 }
