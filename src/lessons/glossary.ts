@@ -76,5 +76,9 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   potentiometer: { term: "가변저항", short: "손잡이를 돌리면 가운데 핀(손잡이 핀)이 저항 위를 움직여 두 쪽 저항 비율이 바뀌는 부품. 볼륨 노브가 대표적이다." },
   analog: { term: "아날로그", short: "0과 1 두 값이 아니라 그 사이 아무 값이나 될 수 있는 신호. 예: 0~3V 사이의 전압." },
   adc: { term: "ADC", short: "아날로그-디지털 변환기. 핀에 들어온 전압을 숫자로 바꿔 MCU가 읽게 해 준다." },
+  floating: { term: "떠 있는 입력", short: "어디에도 이어지지 않아 전압이 정해지지 않은 핀. 손만 가까이 대도 0과 1 사이를 제멋대로 오간다." },
+  "pull-up": { term: "풀업 저항", short: "입력 핀을 저항으로 + 쪽에 이어, 아무것도 안 할 때 1(높은 전압)이 되게 하는 저항." },
+  "pull-down": { term: "풀다운 저항", short: "입력 핀을 저항으로 − 쪽에 이어, 아무것도 안 할 때 0(낮은 전압)이 되게 하는 저항." },
+  ldr: { term: "광센서(CdS)", short: "빛을 받으면 저항이 작아지는 부품. 어두우면 수백 kΩ, 밝으면 1 kΩ쯤." },
   "fetch-decode-execute": { term: "인출-해석-실행", short: "CPU가 도는 한 바퀴. 명령어를 꺼내고(인출), 무슨 일인지 알아보고(해석), 해낸다(실행)." },
 };
