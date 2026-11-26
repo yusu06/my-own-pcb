@@ -80,5 +80,7 @@ export const GLOSSARY: Record<string, { term: string; short: string }> = {
   "pull-up": { term: "풀업 저항", short: "입력 핀을 저항으로 + 쪽에 이어, 아무것도 안 할 때 1(높은 전압)이 되게 하는 저항." },
   "pull-down": { term: "풀다운 저항", short: "입력 핀을 저항으로 − 쪽에 이어, 아무것도 안 할 때 0(낮은 전압)이 되게 하는 저항." },
   ldr: { term: "광센서(CdS)", short: "빛을 받으면 저항이 작아지는 부품. 어두우면 수백 kΩ, 밝으면 1 kΩ쯤." },
+  capacitor: { term: "커패시터", short: "전하를 잠깐 담아 두는 부품. 물통처럼 채우는 데도, 비우는 데도 시간이 걸린다. 단위는 패럿(F), 보통 µF." },
+  "time-constant": { term: "시간 상수(τ)", short: "저항 × 커패시터 값. 커패시터가 채워지거나 비워지는 빠르기의 기준 시간. τ마다 남은 차이가 약 37%로 줄어든다." },
   "fetch-decode-execute": { term: "인출-해석-실행", short: "CPU가 도는 한 바퀴. 명령어를 꺼내고(인출), 무슨 일인지 알아보고(해석), 해낸다(실행)." },
 };
